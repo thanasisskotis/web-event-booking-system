@@ -32,7 +32,7 @@ class Booking(Base):
 
     booking_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False, index=True)
-    ticket_type_id = Column(Integer, ForeignKey("ticket_types.ticket_type_id"), nullable=False, index=True)
+    ticket_type_id = Column(Integer, ForeignKey("tickettypes.ticket_type_id"), nullable=False, index=True)  # table is "tickettypes", not "ticket_types"
     booking_time = Column(DateTime(timezone=True), server_default=func.now())
     number_of_tickets = Column(Integer, nullable=False)
     total_cost = Column(Numeric(10, 2), nullable=False)

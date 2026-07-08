@@ -82,3 +82,8 @@ class EventOut(BaseModel):
     status: EventStatus
     description: str | None
     ticket_types: list[TicketTypeOut]
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def extract_category_names(cls, v):
+        return [c.name if hasattr(c, "name") else c for c in v]

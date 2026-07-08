@@ -7,6 +7,11 @@ from app.models.models_booking import Booking, TicketType
 from app.models.models_event import Category, Event, EventStatus
 from app.models.models_user import User
 from app.schemas.event import EventCreate, EventOut, EventUpdate
+from datetime import datetime
+from decimal import Decimal
+
+from fastapi import Query
+from sqlalchemy import text
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -154,4 +159,78 @@ def cancel_event(event_id: int, db: Session = Depends(get_db), user: User = Depe
     event.status = EventStatus.CANCELLED
     db.commit()
     db.refresh(event)
+    return event
+
+
+
+@router.get("", response_model=list[EventOut])
+def list_events(
+    db: Session = Depends(get_db),
+    category: str | None = Query(None, description="Category name"),
+    q: str | None = Query(None, description="Free-text search in title/description"),
+    city: str | None = None,
+    country: str | None = None,
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+    min_price: Decimal | None = None,
+    max_price: Decimal | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+):
+    # Phase 1: find matching event_ids (select start_datetime too,
+    # required by Postgres when combining DISTINCT with ORDER BY)
+    base = db.query(Event.event_id, Event.start_datetime).filter(Event.status == EventStatus.PUBLISHED)
+
+    if city:
+        base = base.filter(Event.city.ilike(city))
+    if country:
+        base = base.filter(Event.country.ilike(country))
+    if date_from:
+        base = base.filter(Event.start_datetime >= date_from)
+    if date_to:
+        base = base.filter(Event.start_datetime <= date_to)
+    if category:
+        base = base.join(Event.categories).filter(Category.name == category)
+    if min_price is not None or max_price is not None:
+        base = base.join(Event.ticket_types)
+        if min_price is not None:
+            base = base.filter(TicketType.price >= min_price)
+        if max_price is not None:
+            base = base.filter(TicketType.price <= max_price)
+    if q:
+        base = base.filter(text("events.search_vector @@ plainto_tsquery('greek', :q)")).params(q=q)
+
+    rows = (
+        base.distinct()
+        .order_by(Event.start_datetime)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    event_ids = [r[0] for r in rows]
+    if not event_ids:
+        return []
+
+    # Phase 2: fetch full objects with eager-loaded relationships, no LIMIT here
+    events = (
+        db.query(Event)
+        .options(joinedload(Event.ticket_types), joinedload(Event.categories))
+        .filter(Event.event_id.in_(event_ids))
+        .all()
+    )
+    order = {eid: i for i, eid in enumerate(event_ids)}
+    events.sort(key=lambda e: order[e.event_id])
+    return events
+
+
+@router.get("/{event_id}", response_model=EventOut)
+def get_event(event_id: int, db: Session = Depends(get_db)):
+    event = (
+        db.query(Event)
+        .options(joinedload(Event.ticket_types), joinedload(Event.categories))
+        .filter(Event.event_id == event_id, Event.status == EventStatus.PUBLISHED)
+        .first()
+    )
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return event

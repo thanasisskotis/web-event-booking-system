@@ -3,7 +3,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # Connection string: postgresql://<user>:<password>@<host>/<database>
-engine = create_engine(settings.database_url)
+# TODO: hardcoded for now, move to app.core.config.settings.database_url later
+SQLALCHEMY_DATABASE_URL = "postgresql://skotis:skotis@localhost/eventapp_db"
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

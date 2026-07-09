@@ -21,3 +21,9 @@ class BookingOut(BaseModel):
     number_of_tickets: int
     total_cost: Decimal
     booking_status: BookingStatus
+
+
+class BookingForOrganizer(BookingOut):
+    attendee_username: str
+    attendee_email: str
+    ticket_type_name: str

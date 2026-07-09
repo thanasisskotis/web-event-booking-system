@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.models_booking import Booking, TicketType
 from app.models.models_event import Category, Event, EventStatus
 from app.models.models_user import User
+from app.schemas.booking import BookingForOrganizer
 from app.schemas.event import EventCreate, EventOut, EventUpdate
 from datetime import datetime
 from decimal import Decimal
@@ -85,6 +86,36 @@ def list_my_events(db: Session = Depends(get_db), user: User = Depends(require_a
         .filter(Event.organizer_id == user.user_id)
         .all()
     )
+
+
+@router.get("/{event_id}/bookings", response_model=list[BookingForOrganizer])
+def list_event_bookings(event_id: int, db: Session = Depends(get_db), user: User = Depends(require_approved)):
+    event = _get_owned_event(event_id, user, db)
+
+    bookings = (
+        db.query(Booking)
+        .join(TicketType, Booking.ticket_type_id == TicketType.ticket_type_id)
+        .filter(TicketType.event_id == event.event_id)
+        .options(joinedload(Booking.user), joinedload(Booking.ticket_type))
+        .order_by(Booking.booking_time)
+        .all()
+    )
+
+    return [
+        BookingForOrganizer(
+            booking_id=b.booking_id,
+            user_id=b.user_id,
+            ticket_type_id=b.ticket_type_id,
+            booking_time=b.booking_time,
+            number_of_tickets=b.number_of_tickets,
+            total_cost=b.total_cost,
+            booking_status=b.booking_status,
+            attendee_username=b.user.username,
+            attendee_email=b.user.email,
+            ticket_type_name=b.ticket_type.name,
+        )
+        for b in bookings
+    ]
 
 
 @router.patch("/{event_id}", response_model=EventOut)

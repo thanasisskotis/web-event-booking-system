@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from app.models.models_event import EventStatus
 
@@ -68,6 +68,7 @@ class EventOut(BaseModel):
 
     event_id: int
     title: str
+    categories: list[str]
     event_type: str
     venue: str
     address: str

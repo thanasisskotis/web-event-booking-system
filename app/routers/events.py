@@ -3,11 +3,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.security import require_approved
 from app.database import get_db
-from app.models.models_booking import Booking, TicketType
+from app.models.models_booking import Booking, BookingStatus, TicketType
 from app.models.models_event import Category, Event, EventStatus
+from app.models.models_message import Message
 from app.models.models_user import User
 from app.schemas.booking import BookingForOrganizer
 from app.schemas.event import EventCreate, EventOut, EventUpdate
+from app.schemas.message import BroadcastCreate, MessageOut
 from datetime import datetime
 from decimal import Decimal
 
@@ -192,6 +194,44 @@ def cancel_event(event_id: int, db: Session = Depends(get_db), user: User = Depe
     db.refresh(event)
     return event
 
+
+@router.post("/{event_id}/notify-cancellation", response_model=list[MessageOut])
+def notify_cancellation(
+    event_id: int,
+    payload: BroadcastCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_approved),
+):
+    event = _get_owned_event(event_id, user, db)
+    if event.status != EventStatus.CANCELLED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Event must be cancelled before broadcasting a cancellation notice",
+        )
+
+    attendee_ids = (
+        db.query(Booking.user_id)
+        .join(TicketType, Booking.ticket_type_id == TicketType.ticket_type_id)
+        .filter(TicketType.event_id == event.event_id, Booking.booking_status == BookingStatus.CONFIRMED)
+        .distinct()
+        .all()
+    )
+
+    messages = [
+        Message(
+            sender_id=user.user_id,
+            recipient_id=user_id,
+            event_id=event.event_id,
+            subject=payload.subject or f"Event cancelled: {event.title}",
+            body=payload.body,
+        )
+        for (user_id,) in attendee_ids
+    ]
+    db.add_all(messages)
+    db.commit()
+    for message in messages:
+        db.refresh(message)
+    return messages
 
 
 @router.get("", response_model=list[EventOut])

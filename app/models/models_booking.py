@@ -39,5 +39,5 @@ class Booking(Base):
     total_cost = Column(Numeric(10, 2), nullable=False)
     booking_status = Column(SAEnum(BookingStatus, name="booking_status"), nullable=False, default=BookingStatus.PENDING)
 
-    ticket_type = relationship("TicketType")
+    ticket_type = relationship("TicketType", back_populates="bookings")
     user = relationship("User")

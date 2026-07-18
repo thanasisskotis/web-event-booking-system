@@ -113,6 +113,56 @@ def _events_to_xml(events: list[Event]) -> bytes:
     return etree.tostring(root, pretty_print=True, xml_declaration=True, encoding="UTF-8")
 
 
+def _events_to_dict(events: list[Event]) -> list[dict]:
+    result = []
+    for event in events:
+        bookings = [
+            {
+                "booking_id": b.booking_id,
+                "attendee_user_id": b.user.username,
+                "time": b.booking_time.isoformat(),
+                "ticket_type_ref": tt.ticket_type_id,
+                "number_of_tickets": b.number_of_tickets,
+                "total_cost": str(b.total_cost),
+                "booking_status": b.booking_status.value,
+            }
+            for tt in event.ticket_types
+            for b in tt.bookings
+        ]
+        result.append({
+            "event_id": event.event_id,
+            "title": event.title,
+            "categories": [c.name for c in event.categories],
+            "event_type": event.event_type,
+            "venue": event.venue,
+            "address": event.address,
+            "city": event.city,
+            "country": event.country,
+            "geo_location": (
+                {"latitude": event.latitude, "longitude": event.longitude}
+                if event.latitude is not None else None
+            ),
+            "start_datetime": event.start_datetime.isoformat(),
+            "end_datetime": event.end_datetime.isoformat(),
+            "capacity": event.capacity,
+            "ticket_types": [
+                {
+                    "ticket_type_id": tt.ticket_type_id,
+                    "name": tt.name,
+                    "price": str(tt.price),
+                    "quantity": tt.quantity,
+                    "available": tt.available,
+                }
+                for tt in event.ticket_types
+            ],
+            "bookings": bookings,
+            "organizer_user_id": event.organizer.username,
+            "status": event.status.value,
+            "description": event.description,
+            "media": [p.file_path for p in event.photos],
+        })
+    return result
+
 
 @router.get("/export/events")
 def export_events(format: str = "json", db: Session = Depends(get_db)):

@@ -25,6 +25,7 @@ class TicketType(Base):
     available = Column(Integer, nullable=False)
 
     event = relationship("Event", back_populates="ticket_types")
+    bookings = relationship("Booking", back_populates="ticket_type")
 
 
 class Booking(Base):

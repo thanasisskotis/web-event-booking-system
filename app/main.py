@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import admin, auth, events, bookings, messages
+from app.routers import admin, auth, events, bookings, messages, recommendations
 
 app = FastAPI(title="Event Booking System")
 
@@ -9,6 +9,7 @@ app.include_router(admin.router)
 app.include_router(events.router)
 app.include_router(bookings.router)
 app.include_router(messages.router)
+app.include_router(recommendations.router)
 
 
 @app.get("/health")

@@ -12,6 +12,7 @@ from app.models.models_user import User, UserPrivilege, UserStatus
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -46,6 +47,21 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_optional_user(
+    token: str | None = Depends(optional_oauth2_scheme), db: Session = Depends(get_db)
+) -> User | None:
+    if token is None:
+        return None
+    try:
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
+        username = payload.get("sub")
+    except JWTError:
+        return None
+    if username is None:
+        return None
+    return db.query(User).filter(User.username == username).first()
 
 
 def require_approved(user: User = Depends(get_current_user)) -> User:

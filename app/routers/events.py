@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.security import require_approved
+from app.core.security import get_optional_user, require_approved
 from app.database import get_db
 from app.models.models_booking import Booking, BookingStatus, TicketType
 from app.models.models_event import Category, Event, EventStatus
-from app.models.models_message import Message
+from app.models.models_message import Message, EventView
 from app.models.models_user import User
 from app.schemas.booking import BookingForOrganizer
 from app.schemas.event import EventCreate, EventOut, EventUpdate
@@ -295,7 +295,11 @@ def list_events(
 
 
 @router.get("/{event_id}", response_model=EventOut)
-def get_event(event_id: int, db: Session = Depends(get_db)):
+def get_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_optional_user),
+):
     event = (
         db.query(Event)
         .options(joinedload(Event.ticket_types), joinedload(Event.categories))
@@ -304,4 +308,9 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
     )
     if event is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    if user is not None:
+        db.add(EventView(user_id=user.user_id, event_id=event.event_id))
+        db.commit()
+
     return event

@@ -139,7 +139,9 @@ def get_recommendations(db: Session, user_id: int, top_n: int = 10) -> list[Even
 
     events_by_id = {
         e.event_id: e
-        for e in db.query(Event).filter(Event.event_id.in_(top_event_ids)).all()
+        for e in db.query(Event)
+        .filter(Event.event_id.in_(top_event_ids), Event.status == EventStatus.PUBLISHED)
+        .all()
     }
     return [events_by_id[eid] for eid in top_event_ids if eid in events_by_id]
 

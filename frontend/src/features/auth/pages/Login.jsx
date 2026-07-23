@@ -1,49 +1,66 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert } from "@mantine/core";
+import { useAuth } from "../AuthContext";
+
+const schema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
 
 export default function Login() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
+  const [serverError, setServerError] = useState(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({ resolver: zodResolver(schema) });
+
+  async function onSubmit(values) {
+    setServerError(null);
     try {
-      await login(username, password);
-      navigate("/");
+      await login(values.username, values.password);
+      const redirectTo = location.state?.from?.pathname ?? "/";
+      navigate(redirectTo, { replace: true });
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      setError(detail || "Login failed");
+      setServerError(err.response?.data?.detail ?? "Login failed");
     }
   }
 
   return (
-    <div>
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Username</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} required />
-        </div>
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        <button type="submit">Log in</button>
+    <Paper maw={400} mx="auto" mt="xl" p="lg" withBorder radius="md">
+      <Title order={2} mb="xs">
+        Log in
+      </Title>
+      <Text c="dimmed" size="sm" mb="md">
+        Access your bookings, events, and messages.
+      </Text>
+
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Stack>
+          {serverError && (
+            <Alert color="red" variant="light">
+              {serverError}
+            </Alert>
+          )}
+          <TextInput label="Username" {...register("username")} error={errors.username?.message} />
+          <PasswordInput label="Password" {...register("password")} error={errors.password?.message} />
+          <Button type="submit" loading={isSubmitting} fullWidth mt="sm">
+            Log in
+          </Button>
+        </Stack>
       </form>
-      <p>
+
+      <Text size="sm" mt="md">
         No account? <Link to="/register">Register</Link>
-      </p>
-    </div>
+      </Text>
+    </Paper>
   );
 }

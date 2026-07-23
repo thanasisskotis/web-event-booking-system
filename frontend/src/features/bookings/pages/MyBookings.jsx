@@ -1,5 +1,9 @@
-import { Table, Title, Badge, Button, Text, Loader, Center, Stack } from "@mantine/core";
+import { Table, Title, Badge, Button, Stack } from "@mantine/core";
+import { IconTicket } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import { confirmAction } from "../../../components/confirm";
+import EmptyState from "../../../components/EmptyState";
+import TableSkeleton from "../../../components/TableSkeleton";
 import { useMyBookings, useCancelBooking } from "../api";
 
 const statusColor = { CONFIRMED: "green", PENDING: "yellow", CANCELLED: "gray" };
@@ -17,19 +21,13 @@ export default function MyBookings() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <Center py="xl">
-        <Loader />
-      </Center>
-    );
-  }
-
   return (
     <Stack>
       <Title order={2}>My bookings</Title>
-      {!bookings?.length ? (
-        <Text c="dimmed">You haven&apos;t booked any events yet.</Text>
+      {isLoading ? (
+        <TableSkeleton />
+      ) : !bookings?.length ? (
+        <EmptyState icon={IconTicket} message="You haven't booked any events yet." />
       ) : (
         <Table striped>
           <Table.Thead>
@@ -57,7 +55,14 @@ export default function MyBookings() {
                       color="red"
                       variant="light"
                       loading={cancelBooking.isPending}
-                      onClick={() => handleCancel(b.booking_id)}
+                      onClick={() =>
+                        confirmAction({
+                          title: "Cancel booking",
+                          message: `Cancel booking #${b.booking_id} (${b.number_of_tickets} ticket(s))? The seats will be released.`,
+                          confirmLabel: "Cancel booking",
+                          onConfirm: () => handleCancel(b.booking_id),
+                        })
+                      }
                     >
                       Cancel
                     </Button>

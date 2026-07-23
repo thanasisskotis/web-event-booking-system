@@ -6,8 +6,6 @@ import {
   Badge,
   Button,
   Group,
-  Loader,
-  Center,
   Text,
   Modal,
   TextInput,
@@ -20,8 +18,11 @@ import { DateTimePicker } from "@mantine/dates";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconCalendarEvent } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
+import { confirmAction } from "../../../components/confirm";
+import EmptyState from "../../../components/EmptyState";
+import TableSkeleton from "../../../components/TableSkeleton";
 import { useMyEvents, useCreateEvent, usePublishEvent, useCancelEvent, useDeleteEvent } from "../api";
 
 const CATEGORIES = ["Music", "Theatre", "Conference", "Sports", "Workshop"];
@@ -186,14 +187,6 @@ export default function MyEvents() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <Center py="xl">
-        <Loader />
-      </Center>
-    );
-  }
-
   return (
     <Stack>
       <Group justify="space-between">
@@ -201,8 +194,14 @@ export default function MyEvents() {
         <Button onClick={() => setModalOpen(true)}>Create event</Button>
       </Group>
 
-      {!events?.length ? (
-        <Text c="dimmed">You haven&apos;t created any events yet.</Text>
+      {isLoading ? (
+        <TableSkeleton />
+      ) : !events?.length ? (
+        <EmptyState icon={IconCalendarEvent} message="You haven't created any events yet.">
+          <Button variant="light" onClick={() => setModalOpen(true)}>
+            Create your first event
+          </Button>
+        </EmptyState>
       ) : (
         <Table striped>
           <Table.Thead>
@@ -235,7 +234,14 @@ export default function MyEvents() {
                           size="xs"
                           color="red"
                           variant="light"
-                          onClick={() => handleAction(deleteEvent, event.event_id, "Event deleted")}
+                          onClick={() =>
+                            confirmAction({
+                              title: "Delete event",
+                              message: `Permanently delete "${event.title}"? This can't be undone.`,
+                              confirmLabel: "Delete",
+                              onConfirm: () => handleAction(deleteEvent, event.event_id, "Event deleted"),
+                            })
+                          }
                         >
                           Delete
                         </Button>
@@ -246,7 +252,14 @@ export default function MyEvents() {
                         size="xs"
                         color="red"
                         variant="light"
-                        onClick={() => handleAction(cancelEvent, event.event_id, "Event cancelled")}
+                        onClick={() =>
+                          confirmAction({
+                            title: "Cancel event",
+                            message: `Cancel "${event.title}"? Existing bookings are kept for the record, but no new bookings will be accepted.`,
+                            confirmLabel: "Cancel event",
+                            onConfirm: () => handleAction(cancelEvent, event.event_id, "Event cancelled"),
+                          })
+                        }
                       >
                         Cancel
                       </Button>

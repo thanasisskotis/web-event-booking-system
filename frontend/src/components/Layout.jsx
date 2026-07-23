@@ -4,7 +4,7 @@ import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 
 export default function Layout() {
-  const [opened, { toggle }] = useDisclosure();
+  const [opened, { toggle, close }] = useDisclosure();
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -13,6 +13,16 @@ export default function Layout() {
     logout();
     navigate("/login");
   }
+
+  // A nav item is active on an exact match, or when the current path is nested
+  // under it (e.g. /events/5 highlights "Browse events"). Root is exact-only.
+  function isActive(path) {
+    return path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+  }
+
+  const navItem = (label, to) => (
+    <NavLink label={label} component={Link} to={to} active={isActive(to)} onClick={close} />
+  );
 
   return (
     <AppShell
@@ -53,14 +63,14 @@ export default function Layout() {
       </AppShell.Header>
 
       <AppShell.Navbar p="md">
-        <NavLink label="Browse events" component={Link} to="/events" active={location.pathname === "/events"} />
+        {navItem("Browse events", "/events")}
         {isAuthenticated && (
           <>
-            <NavLink label="Dashboard" component={Link} to="/" active={location.pathname === "/"} />
-            <NavLink label="My events" component={Link} to="/my-events" />
-            <NavLink label="My bookings" component={Link} to="/my-bookings" />
-            <NavLink label="Messages" component={Link} to="/messages" />
-            {user.priviledge === "ADMIN" && <NavLink label="Admin" component={Link} to="/admin" />}
+            {navItem("Dashboard", "/")}
+            {navItem("My events", "/my-events")}
+            {navItem("My bookings", "/my-bookings")}
+            {navItem("Messages", "/messages")}
+            {user.priviledge === "ADMIN" && navItem("Admin", "/admin")}
           </>
         )}
       </AppShell.Navbar>

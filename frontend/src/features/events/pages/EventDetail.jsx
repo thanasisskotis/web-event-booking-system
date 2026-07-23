@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router-dom";
-import { Title, Text, Badge, Group, Stack, Loader, Center, Divider, Paper } from "@mantine/core";
+import { Title, Text, Badge, Group, Stack, Loader, Center, Divider, Paper, Anchor } from "@mantine/core";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { useEvent } from "../api";
 import { useAuth } from "../../auth/AuthContext";
 import EventMap from "../components/EventMap";
@@ -26,6 +27,12 @@ export default function EventDetail() {
 
   return (
     <Stack gap="lg" maw={800} mx="auto">
+      <Anchor component={Link} to="/events" size="sm">
+        <Group gap={4}>
+          <IconArrowLeft size={14} />
+          Back to events
+        </Group>
+      </Anchor>
       <div>
         <Group justify="space-between">
           <Title order={2}>{event.title}</Title>

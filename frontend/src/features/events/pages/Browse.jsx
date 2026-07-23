@@ -13,8 +13,10 @@ import {
   Group,
   Paper,
 } from "@mantine/core";
+import { IconCalendarSearch } from "@tabler/icons-react";
 import { useEventSearch } from "../api";
 import EventCard from "../components/EventCard";
+import EmptyState from "../../../components/EmptyState";
 
 const CATEGORIES = ["Music", "Theatre", "Conference", "Sports", "Workshop"];
 
@@ -98,9 +100,7 @@ export default function Browse() {
       {isError && <Text c="red">Could not load events.</Text>}
 
       {!isLoading && !isError && events.length === 0 && (
-        <Center py="xl">
-          <Text c="dimmed">No events match your filters.</Text>
-        </Center>
+        <EmptyState icon={IconCalendarSearch} message="No events match your filters." />
       )}
 
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>

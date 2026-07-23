@@ -50,7 +50,7 @@ export default function App() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute role="ADMIN">
               <AdminConsole />
             </ProtectedRoute>
           }

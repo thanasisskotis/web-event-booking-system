@@ -13,6 +13,9 @@ const schema = z.object({
   last_name: z.string().min(1, "Required"),
   email: z.string().email("Invalid email"),
   phone: z.string().min(6, "Invalid phone number"),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
   tax_id: z.string().min(1, "Required"),
 });
 
@@ -78,6 +81,11 @@ export default function Register() {
           </SimpleGrid>
           <TextInput label="Email" {...register("email")} error={errors.email?.message} />
           <TextInput label="Phone" {...register("phone")} error={errors.phone?.message} />
+          <TextInput label="Address" {...register("address")} error={errors.address?.message} />
+          <SimpleGrid cols={2}>
+            <TextInput label="City" {...register("city")} error={errors.city?.message} />
+            <TextInput label="Country" {...register("country")} error={errors.country?.message} />
+          </SimpleGrid>
           <TextInput label="Tax ID (ΑΦΜ)" {...register("tax_id")} error={errors.tax_id?.message} />
           <Button type="submit" loading={isSubmitting} fullWidth mt="sm">
             Register

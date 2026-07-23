@@ -9,7 +9,7 @@ import {
   Text,
   Modal,
   TextInput,
-  Select,
+  MultiSelect,
   NumberInput,
   ActionIcon,
   Textarea,
@@ -41,8 +41,9 @@ const eventSchema = z.object({
   address: z.string().min(1, "Required"),
   city: z.string().min(1, "Required"),
   country: z.string().min(1, "Required"),
-  start_datetime: z.date({ required_error: "Required" }),
-  end_datetime: z.date({ required_error: "Required" }),
+  // Mantine v8 DateTimePicker emits a string, not a Date.
+  start_datetime: z.string().min(1, "Required"),
+  end_datetime: z.string().min(1, "Required"),
   capacity: z.coerce.number().int().min(1),
   description: z.string().optional(),
   ticket_types: z.array(ticketTypeSchema).min(1, "Add at least one ticket type"),
@@ -61,7 +62,12 @@ function CreateEventModal({ opened, onClose }) {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(eventSchema),
-    defaultValues: { categories: [], ticket_types: [{ name: "", price: 0, quantity: 1 }] },
+    defaultValues: {
+      categories: [],
+      start_datetime: "",
+      end_datetime: "",
+      ticket_types: [{ name: "", price: 0, quantity: 1 }],
+    },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "ticket_types" });
 
@@ -69,8 +75,8 @@ function CreateEventModal({ opened, onClose }) {
     try {
       await createEvent.mutateAsync({
         ...values,
-        start_datetime: values.start_datetime.toISOString(),
-        end_datetime: values.end_datetime.toISOString(),
+        start_datetime: new Date(values.start_datetime).toISOString(),
+        end_datetime: new Date(values.end_datetime).toISOString(),
       });
       notifications.show({ color: "green", message: "Event created as draft" });
       onClose();
@@ -84,10 +90,10 @@ function CreateEventModal({ opened, onClose }) {
       <form onSubmit={handleSubmit(onSubmit)}>
         <Stack>
           <TextInput label="Title" {...register("title")} error={errors.title?.message} />
-          <Select
+          <MultiSelect
             label="Categories"
+            placeholder="Pick one or more"
             data={CATEGORIES}
-            multiple
             value={watch("categories")}
             onChange={(value) => setValue("categories", value)}
             error={errors.categories?.message}
@@ -103,13 +109,13 @@ function CreateEventModal({ opened, onClose }) {
             <DateTimePicker
               label="Start"
               value={watch("start_datetime")}
-              onChange={(v) => setValue("start_datetime", v)}
+              onChange={(v) => setValue("start_datetime", v, { shouldValidate: true })}
               error={errors.start_datetime?.message}
             />
             <DateTimePicker
               label="End"
               value={watch("end_datetime")}
-              onChange={(v) => setValue("end_datetime", v)}
+              onChange={(v) => setValue("end_datetime", v, { shouldValidate: true })}
               error={errors.end_datetime?.message}
             />
           </Group>

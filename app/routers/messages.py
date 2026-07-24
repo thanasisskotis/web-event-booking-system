@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import require_approved
 from app.database import get_db
-from app.models.models_booking import Booking, BookingStatus, TicketType
+from app.models.models_booking import Booking, TicketType
 from app.models.models_event import Event
 from app.models.models_message import Message
 from app.models.models_user import User
@@ -20,6 +20,40 @@ def _has_booking(db: Session, user_id: int, event_id: int) -> bool:
         .first()
         is not None
     )
+
+
+def _enrich(db: Session, messages: list[Message]) -> list[MessageOut]:
+    """Attach sender/recipient usernames and event title to a batch of messages,
+    doing at most one extra query per lookup table instead of N+1 per message."""
+    if not messages:
+        return []
+
+    user_ids = {m.sender_id for m in messages} | {m.recipient_id for m in messages}
+    users = {u.user_id: u.username for u in db.query(User).filter(User.user_id.in_(user_ids)).all()}
+
+    event_ids = {m.event_id for m in messages if m.event_id is not None}
+    events = {}
+    if event_ids:
+        events = {e.event_id: e.title for e in db.query(Event).filter(Event.event_id.in_(event_ids)).all()}
+
+    result = []
+    for m in messages:
+        result.append(
+            MessageOut(
+                message_id=m.message_id,
+                sender_id=m.sender_id,
+                sender_username=users.get(m.sender_id),
+                recipient_id=m.recipient_id,
+                recipient_username=users.get(m.recipient_id),
+                event_id=m.event_id,
+                event_title=events.get(m.event_id) if m.event_id else None,
+                subject=m.subject,
+                body=m.body,
+                sent_at=m.sent_at,
+                is_read=m.is_read,
+            )
+        )
+    return result
 
 
 @router.post("", response_model=MessageOut, status_code=status.HTTP_201_CREATED)
@@ -59,27 +93,29 @@ def send_message(payload: MessageCreate, db: Session = Depends(get_db), user: Us
     db.add(message)
     db.commit()
     db.refresh(message)
-    return message
+    return _enrich(db, [message])[0]
 
 
 @router.get("/inbox", response_model=list[MessageOut])
 def inbox(db: Session = Depends(get_db), user: User = Depends(require_approved)):
-    return (
+    messages = (
         db.query(Message)
         .filter(Message.recipient_id == user.user_id)
         .order_by(Message.sent_at.desc())
         .all()
     )
+    return _enrich(db, messages)
 
 
 @router.get("/sent", response_model=list[MessageOut])
 def sent(db: Session = Depends(get_db), user: User = Depends(require_approved)):
-    return (
+    messages = (
         db.query(Message)
         .filter(Message.sender_id == user.user_id)
         .order_by(Message.sent_at.desc())
         .all()
     )
+    return _enrich(db, messages)
 
 
 @router.get("/unread-count")
@@ -103,7 +139,7 @@ def mark_read(message_id: int, db: Session = Depends(get_db), user: User = Depen
     message.is_read = True
     db.commit()
     db.refresh(message)
-    return message
+    return _enrich(db, [message])[0]
 
 
 @router.delete("/{message_id}", status_code=status.HTTP_204_NO_CONTENT)

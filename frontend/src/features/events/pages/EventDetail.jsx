@@ -1,17 +1,23 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Title, Text, Badge, Group, Stack, Loader, Center, Divider, Paper, Anchor } from "@mantine/core";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { Title, Text, Badge, Group, Stack, Loader, Center, Divider, Paper, Anchor, Button } from "@mantine/core";
+import { IconArrowLeft, IconMail } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import { useEvent } from "../api";
 import { useAuth } from "../../auth/AuthContext";
 import EventMap from "../components/EventMap";
 import BookingForm from "../../bookings/components/BookingForm";
+import { useSendMessage } from "../../messaging/api";
+import ComposeMessageModal from "../../messaging/components/ComposeMessageModal";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" });
 
 export default function EventDetail() {
   const { eventId } = useParams();
   const { data: event, isLoading, isError } = useEvent(eventId);
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const [messageOpen, setMessageOpen] = useState(false);
+  const sendMessage = useSendMessage();
 
   if (isLoading) {
     return (
@@ -24,6 +30,11 @@ export default function EventDetail() {
   if (isError || !event) {
     return <Text c="red">Event not found.</Text>;
   }
+
+  // Backend also enforces this (sender must have a booking for this event
+  // to message the organizer) — this just avoids showing a button that
+  // would always fail for someone who hasn't booked yet.
+  const canMessageOrganizer = isAuthenticated && user.user_id !== event.organizer_id;
 
   return (
     <Stack gap="lg" maw={800} mx="auto">
@@ -49,6 +60,17 @@ export default function EventDetail() {
             </Badge>
           ))}
         </Group>
+
+        {canMessageOrganizer && (
+          <Button
+            mt="sm"
+            variant="light"
+            leftSection={<IconMail size={16} />}
+            onClick={() => setMessageOpen(true)}
+          >
+            Message organizer
+          </Button>
+        )}
       </div>
 
       {event.description && <Text>{event.description}</Text>}
@@ -74,6 +96,22 @@ export default function EventDetail() {
           </Text>
         )}
       </Paper>
+
+      <ComposeMessageModal
+        opened={messageOpen}
+        onClose={() => setMessageOpen(false)}
+        title="Message the organizer"
+        sending={sendMessage.isPending}
+        onSend={async ({ subject, body }) => {
+          await sendMessage.mutateAsync({
+            recipientId: event.organizer_id,
+            eventId: event.event_id,
+            subject,
+            body,
+          });
+          notifications.show({ color: "green", message: "Message sent" });
+        }}
+      />
     </Stack>
   );
 }

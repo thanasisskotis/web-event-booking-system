@@ -1,21 +1,21 @@
-import { AppShell, Group, Text, Button, NavLink, Burger } from "@mantine/core";
+import { AppShell, Group, Text, Button, NavLink, Burger, Badge } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
+import { useUnreadCount } from "../features/messaging/api";
 
 export default function Layout() {
   const [opened, { toggle, close }] = useDisclosure();
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: unread } = useUnreadCount();
 
   function handleLogout() {
     logout();
     navigate("/login");
   }
 
-  // A nav item is active on an exact match, or when the current path is nested
-  // under it (e.g. /events/5 highlights "Browse events"). Root is exact-only.
   function isActive(path) {
     return path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
   }
@@ -69,7 +69,22 @@ export default function Layout() {
             {navItem("Dashboard", "/")}
             {navItem("My events", "/my-events")}
             {navItem("My bookings", "/my-bookings")}
-            {navItem("Messages", "/messages")}
+            <NavLink
+              label={
+                <Group gap={6} wrap="nowrap">
+                  <span>Messages</span>
+                  {unread?.unread_count > 0 && (
+                    <Badge size="sm" circle>
+                      {unread.unread_count}
+                    </Badge>
+                  )}
+                </Group>
+              }
+              component={Link}
+              to="/messages"
+              active={isActive("/messages")}
+              onClick={close}
+            />
             {user.priviledge === "ADMIN" && navItem("Admin", "/admin")}
           </>
         )}

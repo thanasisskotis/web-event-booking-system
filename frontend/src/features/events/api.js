@@ -90,6 +90,19 @@ export function useEventBookings(eventId) {
   });
 }
 
+// Step 2 of cancellation: notify all CONFIRMED attendees. Backend requires
+// the event to already be CANCELLED before it accepts this call.
+export function useNotifyCancellation(eventId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ subject, body }) => {
+      const response = await api.post(`/events/${eventId}/notify-cancellation`, { subject, body });
+      return response.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages", "sent"] }),
+  });
+}
+
 export function useRecommendations(topN = 10) {
   return useQuery({
     queryKey: ["recommendations", topN],

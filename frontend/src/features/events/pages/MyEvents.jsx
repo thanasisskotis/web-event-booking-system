@@ -23,7 +23,9 @@ import { notifications } from "@mantine/notifications";
 import { confirmAction } from "../../../components/confirm";
 import EmptyState from "../../../components/EmptyState";
 import TableSkeleton from "../../../components/TableSkeleton";
-import { useMyEvents, useCreateEvent, usePublishEvent, useCancelEvent, useDeleteEvent } from "../api";
+import { useMyEvents, useCreateEvent, usePublishEvent, useDeleteEvent } from "../api";
+import EventBookingsModal from "../components/EventBookingsModal";
+import CancelEventModal from "../components/CancelEventModal";
 
 const CATEGORIES = ["Music", "Theatre", "Conference", "Sports", "Workshop"];
 
@@ -41,7 +43,6 @@ const eventSchema = z.object({
   address: z.string().min(1, "Required"),
   city: z.string().min(1, "Required"),
   country: z.string().min(1, "Required"),
-  // Mantine v8 DateTimePicker emits a string, not a Date.
   start_datetime: z.string().min(1, "Required"),
   end_datetime: z.string().min(1, "Required"),
   capacity: z.coerce.number().int().min(1),
@@ -179,9 +180,10 @@ function CreateEventModal({ opened, onClose }) {
 
 export default function MyEvents() {
   const [modalOpen, setModalOpen] = useState(false);
+  const [bookingsEvent, setBookingsEvent] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
   const { data: events, isLoading } = useMyEvents();
   const publishEvent = usePublishEvent();
-  const cancelEvent = useCancelEvent();
   const deleteEvent = useDeleteEvent();
 
   async function handleAction(mutation, eventId, successMessage) {
@@ -254,21 +256,14 @@ export default function MyEvents() {
                       </>
                     )}
                     {event.status === "PUBLISHED" && (
-                      <Button
-                        size="xs"
-                        color="red"
-                        variant="light"
-                        onClick={() =>
-                          confirmAction({
-                            title: "Cancel event",
-                            message: `Cancel "${event.title}"? Existing bookings are kept for the record, but no new bookings will be accepted.`,
-                            confirmLabel: "Cancel event",
-                            onConfirm: () => handleAction(cancelEvent, event.event_id, "Event cancelled"),
-                          })
-                        }
-                      >
-                        Cancel
-                      </Button>
+                      <>
+                        <Button size="xs" variant="default" onClick={() => setBookingsEvent(event)}>
+                          Bookings
+                        </Button>
+                        <Button size="xs" color="red" variant="light" onClick={() => setCancelTarget(event)}>
+                          Cancel
+                        </Button>
+                      </>
                     )}
                   </Group>
                 </Table.Td>
@@ -279,6 +274,8 @@ export default function MyEvents() {
       )}
 
       <CreateEventModal opened={modalOpen} onClose={() => setModalOpen(false)} />
+      <EventBookingsModal event={bookingsEvent} onClose={() => setBookingsEvent(null)} />
+      <CancelEventModal event={cancelTarget} onClose={() => setCancelTarget(null)} />
     </Stack>
   );
 }

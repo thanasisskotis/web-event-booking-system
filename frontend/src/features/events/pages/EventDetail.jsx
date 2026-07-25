@@ -5,6 +5,7 @@ import { IconArrowLeft, IconMail } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { useEvent } from "../api";
 import { useAuth } from "../../auth/AuthContext";
+import { useMyBookings } from "../../bookings/api";
 import EventMap from "../components/EventMap";
 import BookingForm from "../../bookings/components/BookingForm";
 import { useSendMessage } from "../../messaging/api";
@@ -16,6 +17,7 @@ export default function EventDetail() {
   const { eventId } = useParams();
   const { data: event, isLoading, isError } = useEvent(eventId);
   const { user, isAuthenticated } = useAuth();
+  const { data: myBookings } = useMyBookings();
   const [messageOpen, setMessageOpen] = useState(false);
   const sendMessage = useSendMessage();
 
@@ -31,10 +33,17 @@ export default function EventDetail() {
     return <Text c="red">Event not found.</Text>;
   }
 
-  // Backend also enforces this (sender must have a booking for this event
-  // to message the organizer) — this just avoids showing a button that
-  // would always fail for someone who hasn't booked yet.
-  const canMessageOrganizer = isAuthenticated && user.user_id !== event.organizer_id;
+  // Real check, not just a comment: the backend only allows a non-organizer
+  // to message the organizer if they have a CONFIRMED booking for THIS
+  // event specifically (Booking has no direct event_id -- it's reachable
+  // only via ticket_type_id, so we match against this event's ticket types).
+  const eventTicketTypeIds = new Set((event.ticket_types ?? []).map((t) => t.ticket_type_id));
+  const hasBookingForThisEvent = (myBookings ?? []).some(
+    (b) => b.booking_status === "CONFIRMED" && eventTicketTypeIds.has(b.ticket_type_id)
+  );
+
+  const canMessageOrganizer =
+    isAuthenticated && user.user_id !== event.organizer_id && hasBookingForThisEvent;
 
   return (
     <Stack gap="lg" maw={800} mx="auto">

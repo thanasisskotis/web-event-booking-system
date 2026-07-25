@@ -7,10 +7,13 @@ import { useUnreadCount } from "../features/messaging/api";
 export default function Layout() {
   const [opened, { toggle, close }] = useDisclosure();
   const { user, isAuthenticated, logout } = useAuth();
-  const { data: unread } = useUnreadCount(isAuthenticated);
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: unread } = useUnreadCount();
+  // Guests hit this Layout too (it wraps every route, including public
+  // ones like /events and /login) — only poll unread count once logged in,
+  // otherwise this 401s repeatedly and the axios interceptor bounces
+  // guests to /login just for browsing.
+  const { data: unread } = useUnreadCount(isAuthenticated);
 
   function handleLogout() {
     logout();

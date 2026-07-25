@@ -16,11 +16,12 @@ export function useSent() {
   });
 }
 
-export function useUnreadCount() {
+export function useUnreadCount(enabled = true) {
   return useQuery({
     queryKey: ["messages", "unread-count"],
     queryFn: async () => (await api.get("/messages/unread-count")).data,
     refetchInterval: 20000,
+    enabled,
   });
 }
 

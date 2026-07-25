@@ -16,6 +16,9 @@ export function useSent() {
   });
 }
 
+// enabled defaults to true so existing callers (Messages page, where the
+// user is always authenticated via ProtectedRoute) don't need to change.
+// Layout.jsx passes isAuthenticated explicitly, since it renders for guests too.
 export function useUnreadCount(enabled = true) {
   return useQuery({
     queryKey: ["messages", "unread-count"],

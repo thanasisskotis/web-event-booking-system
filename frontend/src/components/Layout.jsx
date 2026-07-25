@@ -7,6 +7,7 @@ import { useUnreadCount } from "../features/messaging/api";
 export default function Layout() {
   const [opened, { toggle, close }] = useDisclosure();
   const { user, isAuthenticated, logout } = useAuth();
+  const { data: unread } = useUnreadCount(isAuthenticated);
   const navigate = useNavigate();
   const location = useLocation();
   const { data: unread } = useUnreadCount();

@@ -27,6 +27,7 @@ import { useMyEvents, useCreateEvent, usePublishEvent, useDeleteEvent } from "..
 import EventBookingsModal from "../components/EventBookingsModal";
 import CancelEventModal from "../components/CancelEventModal";
 import ManagePhotosModal from "../components/ManagePhotosModal";
+import EditEventModal from "../components/EditEventModal";
 
 const CATEGORIES = ["Music", "Theatre", "Conference", "Sports", "Workshop"];
 
@@ -220,6 +221,7 @@ export default function MyEvents() {
   const [bookingsEvent, setBookingsEvent] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [photosEvent, setPhotosEvent] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
   const { data: events, isLoading } = useMyEvents();
   const publishEvent = usePublishEvent();
   const deleteEvent = useDeleteEvent();
@@ -271,6 +273,11 @@ export default function MyEvents() {
                     <Button size="xs" variant="default" onClick={() => setPhotosEvent(event)}>
                       Photos
                     </Button>
+                    {(event.status === "DRAFT" || event.status === "PUBLISHED") && (
+                      <Button size="xs" variant="default" onClick={() => setEditTarget(event)}>
+                        Edit
+                      </Button>
+                    )}
                     {event.status === "DRAFT" && (
                       <>
                         <Button
@@ -318,6 +325,7 @@ export default function MyEvents() {
       <EventBookingsModal event={bookingsEvent} onClose={() => setBookingsEvent(null)} />
       <CancelEventModal event={cancelTarget} onClose={() => setCancelTarget(null)} />
       <ManagePhotosModal event={photosEvent} onClose={() => setPhotosEvent(null)} />
+      <EditEventModal event={editTarget} onClose={() => setEditTarget(null)} />
     </Stack>
   );
 }

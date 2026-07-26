@@ -6,18 +6,28 @@ import { z } from "zod";
 import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert, SimpleGrid } from "@mantine/core";
 import { useAuth } from "../AuthContext";
 
-const schema = z.object({
-  username: z.string().min(3, "At least 3 characters"),
-  password: z.string().min(8, "At least 8 characters"),
-  first_name: z.string().min(1, "Required"),
-  last_name: z.string().min(1, "Required"),
-  email: z.string().email("Invalid email"),
-  phone: z.string().min(6, "Invalid phone number"),
-  address: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-  tax_id: z.string().min(1, "Required"),
-});
+const schema = z
+  .object({
+    username: z.string().min(3, "At least 3 characters"),
+    password: z.string().min(8, "At least 8 characters"),
+    confirm_password: z.string().min(1, "Please confirm your password"),
+    first_name: z.string().min(1, "Required"),
+    last_name: z.string().min(1, "Required"),
+    email: z.string().email("Invalid email"),
+    phone: z.string().min(6, "Invalid phone number"),
+    address: z.string().optional(),
+    city: z.string().optional(),
+    country: z.string().optional(),
+    tax_id: z.string().min(1, "Required"),
+  })
+  // Cross-field validation: zod's .refine() runs after each individual field
+  // passes its own rule, and can compare multiple fields at once. `path`
+  // attaches the resulting error message to confirm_password specifically,
+  // so it shows up under that field rather than as a generic form-level error.
+  .refine((data) => data.password === data.confirm_password, {
+    message: "Passwords don't match",
+    path: ["confirm_password"],
+  });
 
 export default function Register() {
   const [serverError, setServerError] = useState(null);
@@ -33,7 +43,11 @@ export default function Register() {
   async function onSubmit(values) {
     setServerError(null);
     try {
-      await registerAccount(values);
+      // confirm_password only exists to validate on the client -- the
+      // backend's UserRegister schema has no such field, so it's stripped
+      // out of the payload before sending.
+      const { confirm_password, ...payload } = values;
+      await registerAccount(payload);
       setSuccess(true);
     } catch (err) {
       setServerError(err.response?.data?.detail ?? "Registration failed");
@@ -75,6 +89,11 @@ export default function Register() {
           )}
           <TextInput label="Username" {...register("username")} error={errors.username?.message} />
           <PasswordInput label="Password" {...register("password")} error={errors.password?.message} />
+          <PasswordInput
+            label="Confirm password"
+            {...register("confirm_password")}
+            error={errors.confirm_password?.message}
+          />
           <SimpleGrid cols={2}>
             <TextInput label="First name" {...register("first_name")} error={errors.first_name?.message} />
             <TextInput label="Last name" {...register("last_name")} error={errors.last_name?.message} />

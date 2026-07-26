@@ -27,14 +27,3 @@ export function useCreateBooking(eventId) {
     },
   });
 }
-
-export function useCancelBooking() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (bookingId) => {
-      const response = await api.post(`/bookings/${bookingId}/cancel`);
-      return response.data;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bookings", "mine"] }),
-  });
-}

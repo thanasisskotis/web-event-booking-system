@@ -47,6 +47,23 @@ export function useCreateEvent() {
   });
 }
 
+// PATCH /events/{event_id}. Backend rejects `ticket_types` in the payload if
+// the event already has bookings (400) -- callers should omit that key
+// entirely in that case, rather than sending an unchanged/empty array.
+export function useUpdateEvent(eventId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload) => {
+      const response = await api.patch(`/events/${eventId}`, payload);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["events", eventId] });
+    },
+  });
+}
+
 export function usePublishEvent() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -112,7 +129,6 @@ export function useRecommendations(topN = 10) {
     },
   });
 }
-
 
 export function useUploadEventPhoto(eventId) {
   const queryClient = useQueryClient();

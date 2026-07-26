@@ -26,6 +26,7 @@ import TableSkeleton from "../../../components/TableSkeleton";
 import { useMyEvents, useCreateEvent, usePublishEvent, useDeleteEvent } from "../api";
 import EventBookingsModal from "../components/EventBookingsModal";
 import CancelEventModal from "../components/CancelEventModal";
+import ManagePhotosModal from "../components/ManagePhotosModal";
 
 const CATEGORIES = ["Music", "Theatre", "Conference", "Sports", "Workshop"];
 
@@ -182,6 +183,7 @@ export default function MyEvents() {
   const [modalOpen, setModalOpen] = useState(false);
   const [bookingsEvent, setBookingsEvent] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
+  const [photosEvent, setPhotosEvent] = useState(null);
   const { data: events, isLoading } = useMyEvents();
   const publishEvent = usePublishEvent();
   const deleteEvent = useDeleteEvent();
@@ -230,6 +232,9 @@ export default function MyEvents() {
                 <Table.Td>{event.capacity}</Table.Td>
                 <Table.Td>
                   <Group gap="xs">
+                    <Button size="xs" variant="default" onClick={() => setPhotosEvent(event)}>
+                      Photos
+                    </Button>
                     {event.status === "DRAFT" && (
                       <>
                         <Button
@@ -276,6 +281,7 @@ export default function MyEvents() {
       <CreateEventModal opened={modalOpen} onClose={() => setModalOpen(false)} />
       <EventBookingsModal event={bookingsEvent} onClose={() => setBookingsEvent(null)} />
       <CancelEventModal event={cancelTarget} onClose={() => setCancelTarget(null)} />
+      <ManagePhotosModal event={photosEvent} onClose={() => setPhotosEvent(null)} />
     </Stack>
   );
 }

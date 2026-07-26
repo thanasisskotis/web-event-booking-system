@@ -12,6 +12,9 @@ from app.schemas.event import EventCreate, EventOut, EventUpdate
 from app.schemas.message import BroadcastCreate, MessageOut
 from datetime import datetime
 from decimal import Decimal
+from fastapi import UploadFile, File
+from app.models.models_event import EventPhoto
+from app.services.uploads import save_event_photo, delete_event_photo_file
 
 from fastapi import Query
 from sqlalchemy import text
@@ -314,3 +317,39 @@ def get_event(
         db.commit()
 
     return event
+
+
+@router.post("/{event_id}/photos", response_model=EventOut, status_code=status.HTTP_201_CREATED)
+def upload_event_photo(
+    event_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_approved),
+):
+    event = _get_owned_event(event_id, user, db)
+    filename = save_event_photo(file)
+    photo = EventPhoto(event_id=event.event_id, file_path=filename)
+    db.add(photo)
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+@router.delete("/{event_id}/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_event_photo(
+    event_id: int,
+    photo_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_approved),
+):
+    event = _get_owned_event(event_id, user, db)
+    photo = (
+        db.query(EventPhoto)
+        .filter(EventPhoto.photo_id == photo_id, EventPhoto.event_id == event.event_id)
+        .first()
+    )
+    if photo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo not found")
+    delete_event_photo_file(photo.file_path)
+    db.delete(photo)
+    db.commit()

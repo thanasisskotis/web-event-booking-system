@@ -1,8 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
-
 from app.models.models_event import EventStatus
 
 
@@ -14,12 +12,23 @@ class TicketTypeIn(BaseModel):
 
 class TicketTypeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
     ticket_type_id: int
     name: str
     price: Decimal
     quantity: int
     available: int
+
+
+class PhotoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    photo_id: int
+    url: str
+
+    @classmethod
+    def from_orm_photo(cls, photo):
+        # EventPhoto only stores file_path on disk; the frontend needs a
+        # servable URL, so we build it here rather than storing it duplicated.
+        return cls(photo_id=photo.photo_id, url=f"/uploads/{photo.file_path}")
 
 
 class EventCreate(BaseModel):
@@ -65,7 +74,6 @@ class EventUpdate(BaseModel):
 
 class EventOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-
     event_id: int
     title: str
     categories: list[str]
@@ -83,8 +91,16 @@ class EventOut(BaseModel):
     status: EventStatus
     description: str | None
     ticket_types: list[TicketTypeOut]
+    photos: list[PhotoOut] = []
 
     @field_validator("categories", mode="before")
     @classmethod
     def extract_category_names(cls, v):
         return [c.name if hasattr(c, "name") else c for c in v]
+
+    @field_validator("photos", mode="before")
+    @classmethod
+    def build_photo_urls(cls, v):
+        # v is a list of EventPhoto ORM objects (or already-built PhotoOut
+        # instances, e.g. when constructed manually) — normalize either way.
+        return [p if isinstance(p, PhotoOut) else PhotoOut.from_orm_photo(p) for p in v]

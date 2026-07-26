@@ -44,6 +44,8 @@ const eventSchema = z.object({
   address: z.string().min(1, "Required"),
   city: z.string().min(1, "Required"),
   country: z.string().min(1, "Required"),
+  latitude: z.coerce.number().min(-90).max(90).optional().or(z.literal("")),
+  longitude: z.coerce.number().min(-180).max(180).optional().or(z.literal("")),
   start_datetime: z.string().min(1, "Required"),
   end_datetime: z.string().min(1, "Required"),
   capacity: z.coerce.number().int().min(1),
@@ -68,6 +70,8 @@ function CreateEventModal({ opened, onClose }) {
       categories: [],
       start_datetime: "",
       end_datetime: "",
+      latitude: "",
+      longitude: "",
       ticket_types: [{ name: "", price: 0, quantity: 1 }],
     },
   });
@@ -77,6 +81,9 @@ function CreateEventModal({ opened, onClose }) {
     try {
       await createEvent.mutateAsync({
         ...values,
+        // Empty string means "not provided" -> send null, not NaN.
+        latitude: values.latitude === "" ? null : values.latitude,
+        longitude: values.longitude === "" ? null : values.longitude,
         start_datetime: new Date(values.start_datetime).toISOString(),
         end_datetime: new Date(values.end_datetime).toISOString(),
       });
@@ -107,6 +114,35 @@ function CreateEventModal({ opened, onClose }) {
             <TextInput label="City" {...register("city")} error={errors.city?.message} />
             <TextInput label="Country" {...register("country")} error={errors.country?.message} />
           </Group>
+          <Group grow>
+            <NumberInput
+              label="Latitude"
+              placeholder="e.g. 37.9838"
+              decimalScale={6}
+              min={-90}
+              max={90}
+              value={watch("latitude")}
+              onChange={(v) => setValue("latitude", v ?? "", { shouldValidate: true })}
+              error={errors.latitude?.message}
+            />
+            <NumberInput
+              label="Longitude"
+              placeholder="e.g. 23.7275"
+              decimalScale={6}
+              min={-180}
+              max={180}
+              value={watch("longitude")}
+              onChange={(v) => setValue("longitude", v ?? "", { shouldValidate: true })}
+              error={errors.longitude?.message}
+            />
+          </Group>
+          <Text size="xs" c="dimmed" mt={-8}>
+            Optional — adds the OpenStreetMap preview to the event page. Tip: right-click a location on{" "}
+            <a href="https://www.openstreetmap.org" target="_blank" rel="noreferrer">
+              openstreetmap.org
+            </a>{" "}
+            and copy the coordinates shown.
+          </Text>
           <Group grow>
             <DateTimePicker
               label="Start"

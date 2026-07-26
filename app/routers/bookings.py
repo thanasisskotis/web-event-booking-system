@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.security import require_approved
 from app.database import get_db
 from app.models.models_booking import Booking, BookingStatus, TicketType
-from app.models.models_event import Event, EventStatus
+from app.models.models_event import EventStatus
 from app.models.models_user import User
 from app.schemas.booking import BookingCreate, BookingOut
 
@@ -28,7 +28,6 @@ def create_booking(
     )
     if ticket_type is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket type not found")
-
     if ticket_type.event.status != EventStatus.PUBLISHED:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Event is not open for booking")
 
@@ -43,7 +42,6 @@ def create_booking(
         {TicketType.available: TicketType.available - payload.number_of_tickets},
         synchronize_session=False,
     )
-
     if result == 0:
         db.rollback()
         raise HTTPException(
@@ -67,27 +65,3 @@ def create_booking(
 @router.get("/mine", response_model=list[BookingOut])
 def list_my_bookings(db: Session = Depends(get_db), user: User = Depends(require_approved)):
     return db.query(Booking).filter(Booking.user_id == user.user_id).all()
-
-
-@router.post("/{booking_id}/cancel", response_model=BookingOut)
-def cancel_booking(
-    booking_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(require_approved),
-):
-    booking = db.query(Booking).filter(Booking.booking_id == booking_id).first()
-    if booking is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
-    if booking.user_id != user.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your booking")
-    if booking.booking_status != BookingStatus.CONFIRMED:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Booking is not active")
-
-    booking.booking_status = BookingStatus.CANCELLED
-    db.query(TicketType).filter(TicketType.ticket_type_id == booking.ticket_type_id).update(
-        {TicketType.available: TicketType.available + booking.number_of_tickets},
-        synchronize_session=False,
-    )
-    db.commit()
-    db.refresh(booking)
-    return booking

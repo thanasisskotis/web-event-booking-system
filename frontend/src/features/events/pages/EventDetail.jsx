@@ -1,6 +1,20 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Title, Text, Badge, Group, Stack, Loader, Center, Divider, Paper, Anchor, Button } from "@mantine/core";
+import {
+  Title,
+  Text,
+  Badge,
+  Group,
+  Stack,
+  Loader,
+  Center,
+  Divider,
+  Paper,
+  Anchor,
+  Button,
+  SimpleGrid,
+  Image,
+} from "@mantine/core";
 import { IconArrowLeft, IconMail } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { useEvent } from "../api";
@@ -10,6 +24,7 @@ import EventMap from "../components/EventMap";
 import BookingForm from "../../bookings/components/BookingForm";
 import { useSendMessage } from "../../messaging/api";
 import ComposeMessageModal from "../../messaging/components/ComposeMessageModal";
+import { API_BASE_URL } from "../../../api/client";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" });
 
@@ -83,6 +98,14 @@ export default function EventDetail() {
       </div>
 
       {event.description && <Text>{event.description}</Text>}
+
+      {event.photos?.length > 0 && (
+        <SimpleGrid cols={{ base: 2, sm: 3 }}>
+          {event.photos.map((photo) => (
+            <Image key={photo.photo_id} src={`${API_BASE_URL}${photo.url}`} radius="sm" h={140} fit="cover" />
+          ))}
+        </SimpleGrid>
+      )}
 
       {event.latitude != null && event.longitude != null && (
         <EventMap latitude={event.latitude} longitude={event.longitude} title={event.title} />

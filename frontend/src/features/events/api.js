@@ -112,3 +112,35 @@ export function useRecommendations(topN = 10) {
     },
   });
 }
+
+
+export function useUploadEventPhoto(eventId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.post(`/events/${eventId}/photos`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["events", eventId] });
+    },
+  });
+}
+
+export function useDeleteEventPhoto(eventId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (photoId) => {
+      await api.delete(`/events/${eventId}/photos/${photoId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events", "mine"] });
+      queryClient.invalidateQueries({ queryKey: ["events", eventId] });
+    },
+  });
+}

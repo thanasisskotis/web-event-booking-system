@@ -13,6 +13,7 @@ import {
   Group,
   Paper,
 } from "@mantine/core";
+import { DateTimePicker } from "@mantine/dates";
 import { IconCalendarSearch } from "@tabler/icons-react";
 import { useEventSearch } from "../api";
 import EventCard from "../components/EventCard";
@@ -27,6 +28,8 @@ const emptyFilters = {
   country: "",
   min_price: "",
   max_price: "",
+  date_from: "",
+  date_to: "",
   page: 1,
   page_size: 12,
 };
@@ -37,6 +40,13 @@ export default function Browse() {
 
   function updateFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+  }
+
+  // DateTimePicker gives back a string already (same convention used in
+  // MyEvents' create/edit forms); convert to a full ISO string with
+  // timezone before sending, or clear the filter entirely on "".
+  function updateDateFilter(key, value) {
+    updateFilter(key, value ? new Date(value).toISOString() : "");
   }
 
   const events = data ?? [];
@@ -70,6 +80,20 @@ export default function Browse() {
             label="Country"
             value={filters.country}
             onChange={(e) => updateFilter("country", e.target.value)}
+          />
+          <DateTimePicker
+            label="From"
+            placeholder="Any start date"
+            clearable
+            value={filters.date_from}
+            onChange={(value) => updateDateFilter("date_from", value)}
+          />
+          <DateTimePicker
+            label="To"
+            placeholder="Any end date"
+            clearable
+            value={filters.date_to}
+            onChange={(value) => updateDateFilter("date_to", value)}
           />
           <NumberInput
             label="Min price"

@@ -1,6 +1,8 @@
 import axios from "axios";
 
-export const API_BASE_URL = "http://localhost:8000";
+// Defaults to HTTP for local dev; point at the HTTPS backend for the
+// TLS demo by setting VITE_API_URL (see frontend/.env.example).
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

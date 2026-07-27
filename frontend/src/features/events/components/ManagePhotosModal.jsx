@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Modal, SimpleGrid, Image, ActionIcon, Button, Text, Stack, Loader, Center } from "@mantine/core";
+import { Modal, SimpleGrid, Image, ActionIcon, Button, Text, Stack, Loader } from "@mantine/core";
 import { IconTrash, IconUpload } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { confirmAction } from "../../../components/confirm";

@@ -15,6 +15,7 @@ export default function CancelEventModal({ event, onClose }) {
 
   // Reset local state whenever a different event is opened in this modal.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when a different event opens
     setCancelDone(false);
   }, [event?.event_id]);
 

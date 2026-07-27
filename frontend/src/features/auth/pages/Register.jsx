@@ -46,6 +46,7 @@ export default function Register() {
       // confirm_password only exists to validate on the client -- the
       // backend's UserRegister schema has no such field, so it's stripped
       // out of the payload before sending.
+      // eslint-disable-next-line no-unused-vars -- intentionally dropped from the payload
       const { confirm_password, ...payload } = values;
       await registerAccount(payload);
       setSuccess(true);

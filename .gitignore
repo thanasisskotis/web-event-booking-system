@@ -7,3 +7,8 @@ node_modules/
 
 # TLS certs (generated locally, never committed)
 certs/
+
+# e-class recommender dataset (~1.5 GB, trained offline, never committed).
+# Only event_interest.csv is used, by app/recommender/evaluate_offline.py.
+dataset.zip
+rel_event_csvs/

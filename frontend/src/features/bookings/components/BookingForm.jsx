@@ -11,9 +11,12 @@ export default function BookingForm({ event }) {
 
   const bookableTypes = event.ticket_types.filter((t) => t.available > 0);
   const selectedType = event.ticket_types.find((t) => String(t.ticket_type_id) === ticketTypeId);
+  // Requested more than exist -> warn, but keep the typed number as-is
+  // (don't silently clamp) and block the booking until it's corrected.
+  const exceedsAvailable = selectedType && quantity > selectedType.available;
 
   function openConfirm() {
-    if (!selectedType) return;
+    if (!selectedType || exceedsAvailable) return;
     setConfirmOpen(true);
   }
 
@@ -53,15 +56,21 @@ export default function BookingForm({ event }) {
       <NumberInput
         label="Number of tickets"
         min={1}
-        max={selectedType?.available ?? 1}
         value={quantity}
         onChange={(v) => setQuantity(Number(v) || 1)}
+        error={
+          exceedsAvailable
+            ? `Only ${selectedType.available} ticket(s) available for this type.`
+            : null
+        }
       />
-      <Button onClick={openConfirm} disabled={!selectedType}>
+      <Button onClick={openConfirm} disabled={!selectedType || exceedsAvailable}>
         Book now
       </Button>
 
-      <Modal opened={confirmOpen} onClose={() => setConfirmOpen(false)} title="Confirm booking">
+      {/* zIndex above Leaflet's map layers/controls (~1000) so the dialog
+          isn't rendered behind the OpenStreetMap widget on the event page. */}
+      <Modal opened={confirmOpen} onClose={() => setConfirmOpen(false)} title="Confirm booking" zIndex={1100}>
         {selectedType && (
           <Stack>
             <Text>
@@ -69,8 +78,7 @@ export default function BookingForm({ event }) {
               <b>{(Number(selectedType.price) * quantity).toFixed(2)} EUR</b>.
             </Text>
             <Text size="sm" c="dimmed">
-              Tickets are reserved immediately. You can cancel this booking later from
-              &quot;My bookings&quot; if needed.
+              Tickets are reserved immediately and the booking can&apos;t be undone once confirmed.
             </Text>
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setConfirmOpen(false)}>

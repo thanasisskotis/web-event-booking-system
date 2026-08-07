@@ -19,7 +19,7 @@ export default function ComposeMessageModal({ opened, onClose, title, onSend, se
   }
 
   return (
-    <Modal opened={opened} onClose={onClose} title={title} size="md">
+    <Modal opened={opened} onClose={onClose} title={title} size="md" zIndex={1100}>
       <Stack>
         <TextInput
           label="Subject"

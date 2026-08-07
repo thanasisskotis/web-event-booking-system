@@ -1,4 +1,5 @@
 import threading
+import time
 from dataclasses import dataclass
 
 from sqlalchemy import func
@@ -12,9 +13,10 @@ from app.recommender.bmf import BiasedMatrixFactorization, Interaction
 BOOKING_WEIGHT = 5.0
 VIEW_WEIGHT = 1.0
 
-# Retrain once at least this many new signal rows (views + confirmed bookings)
-# have shown up since the last training run, instead of every request.
-RETRAIN_THRESHOLD = 20
+# Retrain on a fixed time cadence rather than per request or per N new rows:
+# the model is fit at most once per interval and served from cache in between.
+# (Periodic retraining is the standard recommender-refresh strategy.)
+RETRAIN_INTERVAL_SECONDS = 3600  # 1 hour
 
 
 @dataclass
@@ -24,21 +26,11 @@ class _TrainedModel:
     event_index: dict[int, int]
     event_ids: list[int]
     signals: dict[tuple[int, int], float]
-    signal_count_at_train: int
+    trained_at: float  # time.monotonic() at the moment this model was fit
 
 
 _cache: _TrainedModel | None = None
 _cache_lock = threading.Lock()
-
-
-def _count_signal_rows(db: Session) -> int:
-    view_count = db.query(func.count(EventView.view_id)).scalar()
-    booking_count = (
-        db.query(func.count(Booking.booking_id))
-        .filter(Booking.booking_status == BookingStatus.CONFIRMED)
-        .scalar()
-    )
-    return view_count + booking_count
 
 
 def _train(db: Session, signals: dict[tuple[int, int], float]) -> _TrainedModel:
@@ -65,7 +57,7 @@ def _train(db: Session, signals: dict[tuple[int, int], float]) -> _TrainedModel:
         event_index=event_index,
         event_ids=event_ids,
         signals=signals,
-        signal_count_at_train=_count_signal_rows(db),
+        trained_at=time.monotonic(),
     )
 
 
@@ -76,17 +68,15 @@ def _get_or_train_model(db: Session) -> _TrainedModel | None:
     if not signals:
         return None
 
-    current_count = _count_signal_rows(db)
-    needs_training = (
-        _cache is None or current_count - _cache.signal_count_at_train >= RETRAIN_THRESHOLD
-    )
+    now = time.monotonic()
+    needs_training = _cache is None or (now - _cache.trained_at) >= RETRAIN_INTERVAL_SECONDS
     if not needs_training:
         return _cache
 
     with _cache_lock:
         # Re-check inside the lock: another request may have already retrained
         # while we were waiting.
-        if _cache is not None and current_count - _cache.signal_count_at_train < RETRAIN_THRESHOLD:
+        if _cache is not None and (time.monotonic() - _cache.trained_at) < RETRAIN_INTERVAL_SECONDS:
             return _cache
         _cache = _train(db, signals)
         return _cache

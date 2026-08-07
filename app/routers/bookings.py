@@ -5,7 +5,7 @@ from app.core.security import require_approved
 from app.database import get_db
 from app.models.models_booking import Booking, BookingStatus, TicketType
 from app.models.models_event import EventStatus
-from app.models.models_user import User
+from app.models.models_user import User, UserPrivilege
 from app.schemas.booking import BookingCreate, BookingOut
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
@@ -17,6 +17,14 @@ def create_booking(
     db: Session = Depends(get_db),
     user: User = Depends(require_approved),
 ):
+    # The admin role is purely administrative (per the course spec / instructor):
+    # it reviews users and exports data, it does not attend events. Block booking.
+    if user.priviledge == UserPrivilege.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The administrator account cannot book tickets",
+        )
+
     if payload.number_of_tickets <= 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="number_of_tickets must be positive")
 

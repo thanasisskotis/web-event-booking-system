@@ -31,7 +31,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "full", time
 export default function EventDetail() {
   const { eventId } = useParams();
   const { data: event, isLoading, isError } = useEvent(eventId);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, hasRole } = useAuth();
   const { data: myBookings } = useMyBookings();
   const [messageOpen, setMessageOpen] = useState(false);
   const sendMessage = useSendMessage();
@@ -117,7 +117,11 @@ export default function EventDetail() {
         <Title order={4} mb="sm">
           Tickets
         </Title>
-        {isAuthenticated ? (
+        {isAuthenticated && hasRole("ADMIN") ? (
+          <Text c="dimmed">
+            The administrator account is for management only and cannot book tickets.
+          </Text>
+        ) : isAuthenticated ? (
           <BookingForm event={event} />
         ) : (
           <Text>

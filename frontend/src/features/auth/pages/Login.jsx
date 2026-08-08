@@ -3,8 +3,10 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert } from "@mantine/core";
+import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert, Group, ThemeIcon } from "@mantine/core";
+import { IconTicket } from "@tabler/icons-react";
 import { useAuth } from "../AuthContext";
+import { getErrorMessage } from "../../../api/errors";
 
 const schema = z.object({
   username: z.string().min(1, "Username is required"),
@@ -30,12 +32,21 @@ export default function Login() {
       const redirectTo = location.state?.from?.pathname ?? "/";
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setServerError(err.response?.data?.detail ?? "Login failed");
+      setServerError(getErrorMessage(err, "Login failed"));
     }
   }
 
   return (
-    <Paper maw={400} mx="auto" mt="xl" p="lg" withBorder radius="md">
+    <Stack maw={400} mx="auto" mt="xl" gap="lg">
+      <Group gap={8} justify="center">
+        <ThemeIcon variant="gradient" gradient={{ from: "violet", to: "indigo", deg: 135 }} radius="md" size={34}>
+          <IconTicket size={20} />
+        </ThemeIcon>
+        <Text fw={800} fz="xl" style={{ letterSpacing: "-0.02em" }}>
+          EventHub
+        </Text>
+      </Group>
+      <Paper p="lg" withBorder radius="md" shadow="sm">
       <Title order={2} mb="xs">
         Log in
       </Title>
@@ -61,6 +72,7 @@ export default function Login() {
       <Text size="sm" mt="md">
         No account? <Link to="/register">Register</Link>
       </Text>
-    </Paper>
+      </Paper>
+    </Stack>
   );
 }

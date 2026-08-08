@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Stack, Title, Text, Button, Group, SimpleGrid, Loader, Center, Paper } from "@mantine/core";
+import { Stack, Title, Text, Button, Group, SimpleGrid, Loader, Center, Box } from "@mantine/core";
+import { IconSearch, IconUserPlus } from "@tabler/icons-react";
 import { useEventSearch } from "../../events/api";
 import EventCard from "../../events/components/EventCard";
 
@@ -8,23 +9,40 @@ export default function Welcome() {
 
   return (
     <Stack gap="xl">
-      <Paper radius="md" p="xl" withBorder bg="var(--mantine-color-blue-light)">
-        <Stack gap="sm" align="flex-start">
-          <Title order={1}>Find and book events near you</Title>
-          <Text size="lg" c="dimmed" maw={600}>
-            Browse concerts, conferences, workshops and more. Create an account to book tickets
-            and organize your own events.
+      <Box
+        p={{ base: "xl", sm: 48 }}
+        style={{
+          borderRadius: "var(--mantine-radius-lg)",
+          background:
+            "linear-gradient(135deg, var(--mantine-color-violet-6) 0%, var(--mantine-color-indigo-8) 100%)",
+          color: "white",
+        }}
+      >
+        <Stack gap="md" align="flex-start" maw={640}>
+          <Title order={1} fz={{ base: 32, sm: 44 }} style={{ lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+            Find and book events near you
+          </Title>
+          <Text size="lg" style={{ opacity: 0.9 }}>
+            Concerts, conferences, workshops and more — all in one place. Create an account
+            to book tickets and organize your own events.
           </Text>
-          <Group mt="sm">
-            <Button component={Link} to="/events" size="md">
+          <Group mt="xs">
+            <Button component={Link} to="/events" size="md" variant="white" c="violet.7" leftSection={<IconSearch size={18} />}>
               Browse events
             </Button>
-            <Button component={Link} to="/register" size="md" variant="default">
+            <Button
+              component={Link}
+              to="/register"
+              size="md"
+              variant="outline"
+              color="white"
+              leftSection={<IconUserPlus size={18} />}
+            >
               Create an account
             </Button>
           </Group>
         </Stack>
-      </Paper>
+      </Box>
 
       <div>
         <Group justify="space-between" mb="sm">

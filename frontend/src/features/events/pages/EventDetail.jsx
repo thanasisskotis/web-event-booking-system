@@ -14,8 +14,9 @@ import {
   Button,
   SimpleGrid,
   Image,
+  Box,
 } from "@mantine/core";
-import { IconArrowLeft, IconMail } from "@tabler/icons-react";
+import { IconArrowLeft, IconMail, IconMapPin, IconCalendarEvent, IconTicket } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { useEvent } from "../api";
 import { useAuth } from "../../auth/AuthContext";
@@ -27,6 +28,60 @@ import ComposeMessageModal from "../../messaging/components/ComposeMessageModal"
 import { API_BASE_URL } from "../../../api/client";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short" });
+
+// Full-width hero: the event's first photo (or a branded gradient) with a dark
+// scrim so the overlaid title/type stay legible over any image.
+function EventHero({ event }) {
+  const cover = event.photos?.[0];
+  const background = cover
+    ? `linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.75) 100%), url(${API_BASE_URL}${cover.url})`
+    : "linear-gradient(135deg, var(--mantine-color-violet-6) 0%, var(--mantine-color-indigo-8) 100%)";
+
+  return (
+    <Box
+      style={{
+        position: "relative",
+        minHeight: 300,
+        borderRadius: "var(--mantine-radius-lg)",
+        overflow: "hidden",
+        background,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        display: "flex",
+        alignItems: "flex-end",
+        color: "white",
+      }}
+    >
+      {!cover && (
+        <IconTicket
+          size={120}
+          stroke={1}
+          style={{ position: "absolute", top: 24, right: 24, opacity: 0.25 }}
+        />
+      )}
+      <Stack gap={6} p={{ base: "md", sm: "xl" }} style={{ zIndex: 1 }}>
+        <Badge color="violet" variant="filled" w="fit-content">
+          {event.event_type}
+        </Badge>
+        <Title order={1} fz={{ base: 26, sm: 36 }} style={{ lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+          {event.title}
+        </Title>
+        <Group gap="lg" style={{ opacity: 0.95 }}>
+          <Group gap={6} wrap="nowrap">
+            <IconMapPin size={16} />
+            <Text size="sm">
+              {event.venue}, {event.city}
+            </Text>
+          </Group>
+          <Group gap={6} wrap="nowrap">
+            <IconCalendarEvent size={16} />
+            <Text size="sm">{dateFormatter.format(new Date(event.start_datetime))}</Text>
+          </Group>
+        </Group>
+      </Stack>
+    </Box>
+  );
+}
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -60,49 +115,49 @@ export default function EventDetail() {
   const canMessageOrganizer =
     isAuthenticated && user.user_id !== event.organizer_id && hasBookingForThisEvent;
 
+  // The hero already shows the first photo; the gallery shows the rest.
+  const galleryPhotos = (event.photos ?? []).slice(1);
+
   return (
-    <Stack gap="lg" maw={800} mx="auto">
+    <Stack gap="lg" maw={900} mx="auto">
       <Anchor component={Link} to="/events" size="sm">
         <Group gap={4}>
           <IconArrowLeft size={14} />
           Back to events
         </Group>
       </Anchor>
-      <div>
-        <Group justify="space-between">
-          <Title order={2}>{event.title}</Title>
-          <Badge color="blue">{event.event_type}</Badge>
-        </Group>
-        <Text c="dimmed">
-          {event.venue}, {event.address}, {event.city}, {event.country}
-        </Text>
-        <Text>{dateFormatter.format(new Date(event.start_datetime))}</Text>
-        <Group gap={6} mt={4}>
-          {event.categories.map((c) => (
-            <Badge key={c} variant="outline">
-              {c}
-            </Badge>
-          ))}
-        </Group>
 
-        {canMessageOrganizer && (
-          <Button
-            mt="sm"
-            variant="light"
-            leftSection={<IconMail size={16} />}
-            onClick={() => setMessageOpen(true)}
-          >
-            Message organizer
-          </Button>
-        )}
-      </div>
+      <EventHero event={event} />
+
+      <Group gap={6}>
+        {event.categories.map((c) => (
+          <Badge key={c} variant="light" color="gray">
+            {c}
+          </Badge>
+        ))}
+      </Group>
+
+      {canMessageOrganizer && (
+        <Button
+          variant="light"
+          w="fit-content"
+          leftSection={<IconMail size={16} />}
+          onClick={() => setMessageOpen(true)}
+        >
+          Message organizer
+        </Button>
+      )}
+
+      <Text c="dimmed" size="sm">
+        {event.venue}, {event.address}, {event.city}, {event.country}
+      </Text>
 
       {event.description && <Text>{event.description}</Text>}
 
-      {event.photos?.length > 0 && (
+      {galleryPhotos.length > 0 && (
         <SimpleGrid cols={{ base: 2, sm: 3 }}>
-          {event.photos.map((photo) => (
-            <Image key={photo.photo_id} src={`${API_BASE_URL}${photo.url}`} radius="sm" h={140} fit="cover" />
+          {galleryPhotos.map((photo) => (
+            <Image key={photo.photo_id} src={`${API_BASE_URL}${photo.url}`} radius="md" h={140} fit="cover" />
           ))}
         </SimpleGrid>
       )}
@@ -113,10 +168,11 @@ export default function EventDetail() {
 
       <Divider />
 
-      <Paper withBorder p="md" radius="md">
-        <Title order={4} mb="sm">
-          Tickets
-        </Title>
+      <Paper withBorder p="lg" radius="md" shadow="sm">
+        <Group gap={8} mb="sm">
+          <IconTicket size={20} color="var(--mantine-color-violet-6)" />
+          <Title order={4}>Tickets</Title>
+        </Group>
         {isAuthenticated && hasRole("ADMIN") ? (
           <Text c="dimmed">
             The administrator account is for management only and cannot book tickets.

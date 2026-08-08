@@ -3,8 +3,23 @@ import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert, SimpleGrid } from "@mantine/core";
+import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert, SimpleGrid, Group, ThemeIcon } from "@mantine/core";
+import { IconTicket } from "@tabler/icons-react";
 import { useAuth } from "../AuthContext";
+import { getErrorMessage } from "../../../api/errors";
+
+function BrandMark() {
+  return (
+    <Group gap={8} justify="center">
+      <ThemeIcon variant="gradient" gradient={{ from: "violet", to: "indigo", deg: 135 }} radius="md" size={34}>
+        <IconTicket size={20} />
+      </ThemeIcon>
+      <Text fw={800} fz="xl" style={{ letterSpacing: "-0.02em" }}>
+        EventHub
+      </Text>
+    </Group>
+  );
+}
 
 const schema = z
   .object({
@@ -51,13 +66,15 @@ export default function Register() {
       await registerAccount(payload);
       setSuccess(true);
     } catch (err) {
-      setServerError(err.response?.data?.detail ?? "Registration failed");
+      setServerError(getErrorMessage(err, "Registration failed"));
     }
   }
 
   if (success) {
     return (
-      <Paper maw={480} mx="auto" mt="xl" p="lg" withBorder radius="md">
+      <Stack maw={480} mx="auto" mt="xl" gap="lg">
+        <BrandMark />
+        <Paper p="lg" withBorder radius="md" shadow="sm">
         <Title order={2} mb="xs">
           Registration received
         </Title>
@@ -68,12 +85,15 @@ export default function Register() {
         <Text mt="md">
           <Link to="/login">Back to login</Link>
         </Text>
-      </Paper>
+        </Paper>
+      </Stack>
     );
   }
 
   return (
-    <Paper maw={480} mx="auto" mt="xl" p="lg" withBorder radius="md">
+    <Stack maw={480} mx="auto" mt="xl" gap="lg">
+      <BrandMark />
+      <Paper p="lg" withBorder radius="md" shadow="sm">
       <Title order={2} mb="xs">
         Create an account
       </Title>
@@ -116,6 +136,7 @@ export default function Register() {
       <Text size="sm" mt="md">
         Already have an account? <Link to="/login">Log in</Link>
       </Text>
-    </Paper>
+      </Paper>
+    </Stack>
   );
 }

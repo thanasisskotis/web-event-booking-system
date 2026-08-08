@@ -1,4 +1,5 @@
-import { AppShell, Group, Text, Button, NavLink, Burger, Badge } from "@mantine/core";
+import { AppShell, Group, Text, Button, NavLink, Burger, Badge, ThemeIcon } from "@mantine/core";
+import { IconTicket } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
@@ -38,9 +39,20 @@ export default function Layout() {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Text fw={700} component={Link} to="/" style={{ textDecoration: "none", color: "inherit" }}>
-              Event Booking
-            </Text>
+            <Group
+              gap={8}
+              component={Link}
+              to="/"
+              wrap="nowrap"
+              style={{ textDecoration: "none", color: "inherit" }}
+            >
+              <ThemeIcon variant="gradient" gradient={{ from: "violet", to: "indigo", deg: 135 }} radius="md" size={30}>
+                <IconTicket size={18} />
+              </ThemeIcon>
+              <Text fw={800} fz="lg" style={{ letterSpacing: "-0.02em" }}>
+                EventHub
+              </Text>
+            </Group>
           </Group>
           <Group>
             {isAuthenticated ? (

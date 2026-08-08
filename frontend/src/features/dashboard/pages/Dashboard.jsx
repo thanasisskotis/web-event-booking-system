@@ -1,8 +1,46 @@
 import { Link } from "react-router-dom";
-import { Title, Text, SimpleGrid, Card, Stack, Loader, Center } from "@mantine/core";
+import { Title, Text, SimpleGrid, Card, Stack, Loader, Center, Group, ThemeIcon } from "@mantine/core";
+import {
+  IconSearch,
+  IconCalendarEvent,
+  IconTicket,
+  IconMail,
+  IconSparkles,
+} from "@tabler/icons-react";
 import { useAuth } from "../../auth/AuthContext";
 import { useRecommendations } from "../../events/api";
 import EventCard from "../../events/components/EventCard";
+
+const ACTIONS = [
+  {
+    to: "/events",
+    icon: IconSearch,
+    color: "violet",
+    title: "Browse & search events",
+    text: "Find events by category, date, price, or location.",
+  },
+  {
+    to: "/my-events",
+    icon: IconCalendarEvent,
+    color: "indigo",
+    title: "Manage my events",
+    text: "Create, edit, publish, or cancel events you organize.",
+  },
+  {
+    to: "/my-bookings",
+    icon: IconTicket,
+    color: "teal",
+    title: "My bookings",
+    text: "Review tickets you've booked.",
+  },
+  {
+    to: "/messages",
+    icon: IconMail,
+    color: "pink",
+    title: "Messages",
+    text: "Inbox and sent messages with organizers and attendees.",
+  },
+];
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -16,36 +54,30 @@ export default function Dashboard() {
       </div>
 
       <SimpleGrid cols={{ base: 1, sm: 2 }}>
-        <Card component={Link} to="/events" withBorder radius="md" p="lg">
-          <Title order={4}>Browse &amp; search events</Title>
-          <Text c="dimmed" size="sm">
-            Find events by category, date, price, or location.
-          </Text>
-        </Card>
-        <Card component={Link} to="/my-events" withBorder radius="md" p="lg">
-          <Title order={4}>Manage my events</Title>
-          <Text c="dimmed" size="sm">
-            Create, edit, publish, or cancel events you organize.
-          </Text>
-        </Card>
-        <Card component={Link} to="/my-bookings" withBorder radius="md" p="lg">
-          <Title order={4}>My bookings</Title>
-          <Text c="dimmed" size="sm">
-            Review tickets you&apos;ve booked.
-          </Text>
-        </Card>
-        <Card component={Link} to="/messages" withBorder radius="md" p="lg">
-          <Title order={4}>Messages</Title>
-          <Text c="dimmed" size="sm">
-            Inbox and sent messages with organizers and attendees.
-          </Text>
-        </Card>
+        {ACTIONS.map(({ to, icon: Icon, color, title, text }) => (
+          <Card key={to} className="event-card" component={Link} to={to} p="lg">
+            <Group align="flex-start" wrap="nowrap">
+              <ThemeIcon variant="light" color={color} size={44} radius="md">
+                <Icon size={24} />
+              </ThemeIcon>
+              <div>
+                <Title order={4}>{title}</Title>
+                <Text c="dimmed" size="sm">
+                  {text}
+                </Text>
+              </div>
+            </Group>
+          </Card>
+        ))}
       </SimpleGrid>
 
       <div>
-        <Title order={3} mb="sm">
-          Recommended for you
-        </Title>
+        <Group gap={8} mb="sm">
+          <ThemeIcon variant="light" color="violet" size={26} radius="sm">
+            <IconSparkles size={16} />
+          </ThemeIcon>
+          <Title order={3}>Recommended for you</Title>
+        </Group>
         {isLoading ? (
           <Center py="md">
             <Loader size="sm" />

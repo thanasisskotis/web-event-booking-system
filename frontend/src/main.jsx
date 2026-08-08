@@ -14,6 +14,7 @@ import "./index.css";
 import { AuthProvider } from "./features/auth/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import App from "./App.jsx";
+import { theme } from "./theme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,7 +27,7 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <MantineProvider>
+    <MantineProvider theme={theme}>
       <Notifications position="top-right" />
       <ModalsProvider>
         <QueryClientProvider client={queryClient}>

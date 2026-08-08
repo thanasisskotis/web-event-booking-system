@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Title,
   Stack,
   Table,
   Badge,
@@ -11,13 +10,16 @@ import {
   Modal,
   Divider,
   Menu,
+  Paper,
 } from "@mantine/core";
-import { IconUsersGroup } from "@tabler/icons-react";
+import { IconUsersGroup, IconDownload } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { confirmAction } from "../../../components/confirm";
 import EmptyState from "../../../components/EmptyState";
 import TableSkeleton from "../../../components/TableSkeleton";
+import PageHeader from "../../../components/PageHeader";
 import { useUsers, useApproveUser, useRejectUser, downloadEventsExport } from "../api";
+import { getErrorMessage } from "../../../api/errors";
 
 const statusColor = { PENDING: "yellow", APPROVED: "green", REJECTED: "red" };
 const FILTERS = [
@@ -36,7 +38,7 @@ function UserDetailModal({ user, onClose }) {
             <Text fw={600}>
               {user.first_name} {user.last_name}
             </Text>
-            <Badge color={statusColor[user.status]}>{user.status}</Badge>
+            <Badge color={statusColor[user.status]} variant="light">{user.status}</Badge>
           </Group>
           <Divider />
           <Detail label="Username" value={user.username} />
@@ -76,7 +78,7 @@ export default function AdminConsole() {
       await mutation.mutateAsync(userId);
       notifications.show({ color: "green", message });
     } catch (err) {
-      notifications.show({ color: "red", message: err.response?.data?.detail ?? "Action failed" });
+      notifications.show({ color: "red", message: getErrorMessage(err, "Action failed") });
     }
   }
 
@@ -90,18 +92,24 @@ export default function AdminConsole() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between">
-        <Title order={2}>Admin console</Title>
-        <Menu>
-          <Menu.Target>
-            <Button variant="default">Export events</Button>
-          </Menu.Target>
-          <Menu.Dropdown>
-            <Menu.Item onClick={() => handleExport("json")}>Download JSON</Menu.Item>
-            <Menu.Item onClick={() => handleExport("xml")}>Download XML</Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      </Group>
+      <PageHeader
+        icon={IconUsersGroup}
+        title="Admin console"
+        subtitle="Review registrations and export the event catalogue."
+        action={
+          <Menu>
+            <Menu.Target>
+              <Button variant="default" leftSection={<IconDownload size={16} />}>
+                Export events
+              </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+              <Menu.Item onClick={() => handleExport("json")}>Download JSON</Menu.Item>
+              <Menu.Item onClick={() => handleExport("xml")}>Download XML</Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
+        }
+      />
 
       <SegmentedControl
         data={FILTERS}
@@ -118,7 +126,8 @@ export default function AdminConsole() {
           message={`No ${filter === "ALL" ? "" : filter.toLowerCase()} users.`}
         />
       ) : (
-        <Table striped highlightOnHover>
+        <Paper withBorder radius="md" p="xs">
+        <Table striped highlightOnHover verticalSpacing="sm">
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Username</Table.Th>
@@ -137,7 +146,7 @@ export default function AdminConsole() {
                 </Table.Td>
                 <Table.Td>{user.email}</Table.Td>
                 <Table.Td>
-                  <Badge color={statusColor[user.status]}>{user.status}</Badge>
+                  <Badge color={statusColor[user.status]} variant="light">{user.status}</Badge>
                 </Table.Td>
                 <Table.Td>
                   <Group gap="xs">
@@ -176,6 +185,7 @@ export default function AdminConsole() {
             ))}
           </Table.Tbody>
         </Table>
+        </Paper>
       )}
 
       <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} />

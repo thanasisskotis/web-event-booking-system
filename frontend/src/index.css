@@ -8,9 +8,22 @@
 
 body {
   margin: 0;
+  /* Soft neutral ground so the white event cards / panels lift off the page
+     instead of blending into it. */
+  background: var(--mantine-color-gray-0);
 }
 
 /* Let Mantine control layout; #root just fills the viewport. */
 #root {
   min-height: 100svh;
+}
+
+/* Event cards lift on hover to signal they're clickable (they link to the
+   event detail page). Kept subtle so it reads as polish, not animation. */
+.event-card {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.event-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--mantine-shadow-md);
 }

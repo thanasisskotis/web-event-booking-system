@@ -100,7 +100,7 @@ def send_message(payload: MessageCreate, db: Session = Depends(get_db), user: Us
 def inbox(db: Session = Depends(get_db), user: User = Depends(require_approved)):
     messages = (
         db.query(Message)
-        .filter(Message.recipient_id == user.user_id)
+        .filter(Message.recipient_id == user.user_id, Message.deleted_by_recipient.is_(False))
         .order_by(Message.sent_at.desc())
         .all()
     )
@@ -111,7 +111,7 @@ def inbox(db: Session = Depends(get_db), user: User = Depends(require_approved))
 def sent(db: Session = Depends(get_db), user: User = Depends(require_approved)):
     messages = (
         db.query(Message)
-        .filter(Message.sender_id == user.user_id)
+        .filter(Message.sender_id == user.user_id, Message.deleted_by_sender.is_(False))
         .order_by(Message.sent_at.desc())
         .all()
     )
@@ -122,7 +122,11 @@ def sent(db: Session = Depends(get_db), user: User = Depends(require_approved)):
 def unread_count(db: Session = Depends(get_db), user: User = Depends(require_approved)):
     count = (
         db.query(Message)
-        .filter(Message.recipient_id == user.user_id, Message.is_read.is_(False))
+        .filter(
+            Message.recipient_id == user.user_id,
+            Message.is_read.is_(False),
+            Message.deleted_by_recipient.is_(False),
+        )
         .count()
     )
     return {"unread_count": count}
@@ -150,5 +154,14 @@ def delete_message(message_id: int, db: Session = Depends(get_db), user: User = 
     if user.user_id not in (message.sender_id, message.recipient_id):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your message")
 
-    db.delete(message)
+    # Per-user soft delete: hide it only for the side that asked. If the user is
+    # both sender and recipient it can't happen (send-to-self is blocked). Once
+    # both sides have deleted, physically remove the row to reclaim storage.
+    if user.user_id == message.sender_id:
+        message.deleted_by_sender = True
+    if user.user_id == message.recipient_id:
+        message.deleted_by_recipient = True
+
+    if message.deleted_by_sender and message.deleted_by_recipient:
+        db.delete(message)
     db.commit()

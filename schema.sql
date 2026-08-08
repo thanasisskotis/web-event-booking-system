@@ -123,7 +123,11 @@ CREATE TABLE Messages (
     subject         VARCHAR(200),
     body            TEXT NOT NULL,
     sent_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-    is_read         BOOLEAN NOT NULL DEFAULT FALSE
+    is_read         BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Per-user soft delete: a message is one shared row, so each side hides it
+    -- independently. The row is only physically removed once both sides delete.
+    deleted_by_sender    BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_by_recipient BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- ============================================

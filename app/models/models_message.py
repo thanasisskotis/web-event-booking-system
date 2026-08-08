@@ -15,6 +15,10 @@ class Message(Base):
     body = Column(Text, nullable=False)
     sent_at = Column(DateTime(timezone=True), server_default=func.now())
     is_read = Column(Boolean, nullable=False, default=False)
+    # Per-user soft delete: each side hides the shared row independently; the
+    # row is only physically removed once both sides have deleted it.
+    deleted_by_sender = Column(Boolean, nullable=False, default=False)
+    deleted_by_recipient = Column(Boolean, nullable=False, default=False)
 
 
 class EventView(Base):

@@ -12,3 +12,6 @@ certs/
 # Only event_interest.csv is used, by app/recommender/evaluate_offline.py.
 dataset.zip
 rel_event_csvs/
+
+# Runtime user uploads (event photos) — served at /uploads, not source.
+uploads/

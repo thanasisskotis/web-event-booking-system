@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
   Stack,
-  Title,
   Tabs,
   Table,
   Badge,
@@ -10,13 +9,16 @@ import {
   Group,
   Divider,
   Button,
+  Paper,
 } from "@mantine/core";
-import { IconMail, IconMailOpened, IconTrash, IconSend } from "@tabler/icons-react";
+import { IconMail, IconMailOpened, IconTrash, IconSend, IconEye, IconCheck } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { confirmAction } from "../../../components/confirm";
 import EmptyState from "../../../components/EmptyState";
 import TableSkeleton from "../../../components/TableSkeleton";
+import PageHeader from "../../../components/PageHeader";
 import { useInbox, useSent, useMarkRead, useDeleteMessage } from "../api";
+import { getErrorMessage } from "../../../api/errors";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" });
 
@@ -63,49 +65,87 @@ function MessageDetailModal({ message, onClose, onDelete }) {
   );
 }
 
+// Read status, shown for both folders:
+//  - Inbox:  whether *you* have opened it (New / Read)
+//  - Sent:   whether the *recipient* has opened it (Seen / Sent) -- is_read on
+//            the shared row reflects the recipient's read state.
+function ReadStatus({ message, direction }) {
+  if (direction === "inbox") {
+    return message.is_read ? (
+      <Badge size="sm" variant="light" color="gray">
+        Read
+      </Badge>
+    ) : (
+      <Badge size="sm" color="violet">
+        New
+      </Badge>
+    );
+  }
+  return message.is_read ? (
+    <Badge size="sm" variant="light" color="green" leftSection={<IconEye size={12} />}>
+      Seen
+    </Badge>
+  ) : (
+    <Badge size="sm" variant="light" color="gray" leftSection={<IconCheck size={12} />}>
+      Sent
+    </Badge>
+  );
+}
+
 function MessageTable({ messages, isLoading, emptyMessage, direction, onOpen }) {
   if (isLoading) return <TableSkeleton />;
   if (!messages?.length) return <EmptyState icon={IconMail} message={emptyMessage} />;
 
   return (
-    <Table striped highlightOnHover>
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>{direction === "inbox" ? "From" : "To"}</Table.Th>
-          <Table.Th>Subject</Table.Th>
-          <Table.Th>Event</Table.Th>
-          <Table.Th>Date</Table.Th>
-          {direction === "inbox" && <Table.Th />}
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {messages.map((m) => (
-          <Table.Tr
-            key={m.message_id}
-            onClick={() => onOpen(m)}
-            style={{ cursor: "pointer", fontWeight: direction === "inbox" && !m.is_read ? 700 : 400 }}
-          >
-            <Table.Td>
-              {direction === "inbox"
-                ? m.sender_username ?? `#${m.sender_id}`
-                : m.recipient_username ?? `#${m.recipient_id}`}
-            </Table.Td>
-            <Table.Td>{m.subject || <Text c="dimmed">(no subject)</Text>}</Table.Td>
-            <Table.Td>{m.event_title ?? (m.event_id ? `#${m.event_id}` : "—")}</Table.Td>
-            <Table.Td>{dateFormatter.format(new Date(m.sent_at))}</Table.Td>
-            {direction === "inbox" && (
-              <Table.Td>
-                {!m.is_read && (
-                  <Badge size="sm" color="blue">
-                    New
-                  </Badge>
-                )}
-              </Table.Td>
-            )}
+    <Paper withBorder radius="md" p="xs">
+      <Table striped highlightOnHover verticalSpacing="sm">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>{direction === "inbox" ? "From" : "To"}</Table.Th>
+            <Table.Th>Subject</Table.Th>
+            <Table.Th>Event</Table.Th>
+            <Table.Th>Date</Table.Th>
+            <Table.Th>Status</Table.Th>
           </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
+        </Table.Thead>
+        <Table.Tbody>
+          {messages.map((m) => {
+            const unreadInbox = direction === "inbox" && !m.is_read;
+            return (
+              <Table.Tr
+                key={m.message_id}
+                onClick={() => onOpen(m)}
+                style={{ cursor: "pointer" }}
+              >
+                <Table.Td style={{ fontWeight: unreadInbox ? 700 : 400 }}>
+                  <Group gap={8} wrap="nowrap">
+                    {direction === "inbox" &&
+                      (m.is_read ? (
+                        <IconMailOpened size={16} color="var(--mantine-color-gray-5)" />
+                      ) : (
+                        <IconMail size={16} color="var(--mantine-color-violet-6)" />
+                      ))}
+                    <span>
+                      {direction === "inbox"
+                        ? m.sender_username ?? `#${m.sender_id}`
+                        : m.recipient_username ?? `#${m.recipient_id}`}
+                    </span>
+                  </Group>
+                </Table.Td>
+                <Table.Td style={{ fontWeight: unreadInbox ? 700 : 400 }}>
+                  {m.subject || <Text c="dimmed">(no subject)</Text>}
+                </Table.Td>
+                <Table.Td>{m.event_title ?? (m.event_id ? `#${m.event_id}` : "—")}</Table.Td>
+                <Table.Td>{dateFormatter.format(new Date(m.sent_at))}</Table.Td>
+                <Table.Td>
+                  <ReadStatus message={m} direction={direction} />
+                </Table.Td>
+              </Table.Tr>
+            );
+          })}
+        </Table.Tbody>
+      </Table>
+    </Paper>
   );
 }
 
@@ -131,13 +171,13 @@ export default function Messages() {
       notifications.show({ color: "green", message: "Message deleted" });
       setSelected(null);
     } catch (err) {
-      notifications.show({ color: "red", message: err.response?.data?.detail ?? "Delete failed" });
+      notifications.show({ color: "red", message: getErrorMessage(err, "Delete failed") });
     }
   }
 
   return (
     <Stack gap="md">
-      <Title order={2}>Messages</Title>
+      <PageHeader icon={IconMail} title="Messages" subtitle="Your conversations with organizers and attendees." />
 
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>

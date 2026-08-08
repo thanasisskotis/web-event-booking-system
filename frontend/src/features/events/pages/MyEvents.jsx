@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Title,
   Stack,
   Table,
   Badge,
@@ -13,21 +12,28 @@ import {
   NumberInput,
   ActionIcon,
   Textarea,
+  Paper,
+  Image,
+  Box,
+  ThemeIcon,
 } from "@mantine/core";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { IconPlus, IconTrash, IconCalendarEvent } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconCalendarEvent, IconTicket } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { confirmAction } from "../../../components/confirm";
 import EmptyState from "../../../components/EmptyState";
 import TableSkeleton from "../../../components/TableSkeleton";
+import PageHeader from "../../../components/PageHeader";
 import { useMyEvents, useCreateEvent, usePublishEvent, useDeleteEvent } from "../api";
 import EventBookingsModal from "../components/EventBookingsModal";
 import CancelEventModal from "../components/CancelEventModal";
 import ManagePhotosModal from "../components/ManagePhotosModal";
 import EditEventModal from "../components/EditEventModal";
+import { getErrorMessage } from "../../../api/errors";
+import { API_BASE_URL } from "../../../api/client";
 
 const CATEGORIES = ["Music", "Theatre", "Conference", "Sports", "Workshop"];
 
@@ -91,7 +97,7 @@ function CreateEventModal({ opened, onClose }) {
       notifications.show({ color: "green", message: "Event created as draft" });
       onClose();
     } catch (err) {
-      notifications.show({ color: "red", message: err.response?.data?.detail ?? "Failed to create event" });
+      notifications.show({ color: "red", message: getErrorMessage(err, "Failed to create event") });
     }
   }
 
@@ -216,6 +222,41 @@ function CreateEventModal({ opened, onClose }) {
   );
 }
 
+// Small square cover preview in the events table: first uploaded photo, or a
+// branded gradient placeholder with a ticket glyph when there's none yet.
+function EventThumb({ event }) {
+  const cover = event.photos?.[0];
+  if (cover) {
+    return (
+      <Image
+        src={`${API_BASE_URL}${cover.url}`}
+        w={48}
+        h={48}
+        radius="sm"
+        fit="cover"
+        alt={event.title}
+      />
+    );
+  }
+  return (
+    <Box
+      w={48}
+      h={48}
+      style={{
+        borderRadius: "var(--mantine-radius-sm)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, var(--mantine-color-violet-5), var(--mantine-color-indigo-7))",
+      }}
+    >
+      <ThemeIcon variant="transparent" c="white" size={24}>
+        <IconTicket size={22} stroke={1.5} />
+      </ThemeIcon>
+    </Box>
+  );
+}
+
 export default function MyEvents() {
   const [modalOpen, setModalOpen] = useState(false);
   const [bookingsEvent, setBookingsEvent] = useState(null);
@@ -231,16 +272,22 @@ export default function MyEvents() {
       await mutation.mutateAsync(eventId);
       notifications.show({ color: "green", message: successMessage });
     } catch (err) {
-      notifications.show({ color: "red", message: err.response?.data?.detail ?? "Action failed" });
+      notifications.show({ color: "red", message: getErrorMessage(err, "Action failed") });
     }
   }
 
   return (
-    <Stack>
-      <Group justify="space-between">
-        <Title order={2}>My events</Title>
-        <Button onClick={() => setModalOpen(true)}>Create event</Button>
-      </Group>
+    <Stack gap="lg">
+      <PageHeader
+        icon={IconCalendarEvent}
+        title="My events"
+        subtitle="Create, publish, and manage the events you organize."
+        action={
+          <Button leftSection={<IconPlus size={16} />} onClick={() => setModalOpen(true)}>
+            Create event
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <TableSkeleton />
@@ -251,9 +298,11 @@ export default function MyEvents() {
           </Button>
         </EmptyState>
       ) : (
-        <Table striped>
+        <Paper withBorder radius="md" p="xs">
+        <Table striped highlightOnHover verticalSpacing="sm">
           <Table.Thead>
             <Table.Tr>
+              <Table.Th w={64} />
               <Table.Th>Title</Table.Th>
               <Table.Th>Status</Table.Th>
               <Table.Th>Capacity</Table.Th>
@@ -263,9 +312,12 @@ export default function MyEvents() {
           <Table.Tbody>
             {events.map((event) => (
               <Table.Tr key={event.event_id}>
-                <Table.Td>{event.title}</Table.Td>
                 <Table.Td>
-                  <Badge color={statusColor[event.status] ?? "gray"}>{event.status}</Badge>
+                  <EventThumb event={event} />
+                </Table.Td>
+                <Table.Td fw={500}>{event.title}</Table.Td>
+                <Table.Td>
+                  <Badge color={statusColor[event.status] ?? "gray"} variant="light">{event.status}</Badge>
                 </Table.Td>
                 <Table.Td>{event.capacity}</Table.Td>
                 <Table.Td>
@@ -319,6 +371,7 @@ export default function MyEvents() {
             ))}
           </Table.Tbody>
         </Table>
+        </Paper>
       )}
 
       <CreateEventModal opened={modalOpen} onClose={() => setModalOpen(false)} />

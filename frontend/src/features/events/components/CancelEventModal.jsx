@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Modal, Stack, Text, Textarea, Checkbox, Group, Button, Alert } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useCancelEvent, useNotifyCancellation } from "../api";
+import { getErrorMessage } from "../../../api/errors";
 
 export default function CancelEventModal({ event, onClose }) {
   const [notify, setNotify] = useState(true);
@@ -27,7 +28,7 @@ export default function CancelEventModal({ event, onClose }) {
       } catch (err) {
         notifications.show({
           color: "red",
-          message: err.response?.data?.detail ?? "Failed to cancel the event",
+          message: getErrorMessage(err, "Failed to cancel the event"),
         });
         return;
       }
@@ -46,8 +47,7 @@ export default function CancelEventModal({ event, onClose }) {
         notifications.show({
           color: "orange",
           message:
-            err.response?.data?.detail ??
-            "Event was cancelled, but sending the notification failed. You can retry below.",
+            getErrorMessage(err, "Event was cancelled, but sending the notification failed. You can retry below."),
         });
         return;
       }

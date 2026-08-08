@@ -5,6 +5,7 @@ import { notifications } from "@mantine/notifications";
 import { confirmAction } from "../../../components/confirm";
 import { useUploadEventPhoto, useDeleteEventPhoto } from "../api";
 import { API_BASE_URL } from "../../../api/client";
+import { getErrorMessage } from "../../../api/errors";
 
 export default function ManagePhotosModal({ event, onClose }) {
   const fileInputRef = useRef(null);
@@ -18,7 +19,7 @@ export default function ManagePhotosModal({ event, onClose }) {
       await uploadPhoto.mutateAsync(file);
       notifications.show({ color: "green", message: "Photo uploaded" });
     } catch (err) {
-      notifications.show({ color: "red", message: err.response?.data?.detail ?? "Upload failed" });
+      notifications.show({ color: "red", message: getErrorMessage(err, "Upload failed") });
     } finally {
       e.target.value = ""; // allow re-selecting the same file
     }
@@ -34,7 +35,7 @@ export default function ManagePhotosModal({ event, onClose }) {
           await deletePhoto.mutateAsync(photoId);
           notifications.show({ color: "green", message: "Photo deleted" });
         } catch (err) {
-          notifications.show({ color: "red", message: err.response?.data?.detail ?? "Delete failed" });
+          notifications.show({ color: "red", message: getErrorMessage(err, "Delete failed") });
         }
       },
     });

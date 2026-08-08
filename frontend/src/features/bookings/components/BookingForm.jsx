@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Select, NumberInput, Button, Stack, Modal, Text, Group } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useCreateBooking } from "../api";
+import { getErrorMessage } from "../../../api/errors";
 
 export default function BookingForm({ event }) {
   const [ticketTypeId, setTicketTypeId] = useState(null);
@@ -28,7 +29,7 @@ export default function BookingForm({ event }) {
     } catch (err) {
       notifications.show({
         color: "red",
-        message: err.response?.data?.detail ?? "Booking failed",
+        message: getErrorMessage(err, "Booking failed"),
       });
     }
   }

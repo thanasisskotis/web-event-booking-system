@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Modal, Stack, TextInput, Textarea, Button, Group } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
+import { getErrorMessage } from "../../../api/errors";
 
 export default function ComposeMessageModal({ opened, onClose, title, onSend, sending }) {
   const [subject, setSubject] = useState("");
@@ -14,7 +15,7 @@ export default function ComposeMessageModal({ opened, onClose, title, onSend, se
       setBody("");
       onClose();
     } catch (err) {
-      notifications.show({ color: "red", message: err.response?.data?.detail ?? "Failed to send message" });
+      notifications.show({ color: "red", message: getErrorMessage(err, "Failed to send message") });
     }
   }
 

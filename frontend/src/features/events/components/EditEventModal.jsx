@@ -19,6 +19,7 @@ import { z } from "zod";
 import { IconPlus, IconTrash, IconLock } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { useEventBookings, useUpdateEvent } from "../api";
+import { getErrorMessage } from "../../../api/errors";
 
 const CATEGORIES = ["Music", "Theatre", "Conference", "Sports", "Workshop"];
 
@@ -128,7 +129,7 @@ export default function EditEventModal({ event, onClose }) {
       notifications.show({ color: "green", message: "Event updated" });
       onClose();
     } catch (err) {
-      notifications.show({ color: "red", message: err.response?.data?.detail ?? "Failed to update event" });
+      notifications.show({ color: "red", message: getErrorMessage(err, "Failed to update event") });
     }
   }
 

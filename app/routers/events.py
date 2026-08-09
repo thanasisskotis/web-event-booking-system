@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.models_booking import Booking, BookingStatus, TicketType
 from app.models.models_event import Category, Event, EventStatus
 from app.models.models_message import Message, EventView
-from app.models.models_user import User
+from app.models.models_user import User, UserPrivilege
 from app.schemas.booking import BookingForOrganizer
 from app.schemas.event import EventCreate, EventOut, EventUpdate
 from app.schemas.message import BroadcastCreate, MessageOut
@@ -54,6 +54,14 @@ def _get_owned_event(event_id: int, user: User, db: Session) -> Event:
 
 @router.post("", response_model=EventOut, status_code=status.HTTP_201_CREATED)
 def create_event(payload: EventCreate, db: Session = Depends(get_db), user: User = Depends(require_approved)):
+    # Same reasoning as the booking block: the admin role is purely
+    # administrative, it does not organize events.
+    if user.priviledge == UserPrivilege.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The administrator account cannot organize events",
+        )
+
     _check_capacity(payload.capacity, payload.ticket_types)
 
     event = Event(

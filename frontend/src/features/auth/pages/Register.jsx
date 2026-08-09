@@ -3,17 +3,35 @@ import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { TextInput, PasswordInput, Button, Paper, Title, Text, Stack, Alert, SimpleGrid, Group, ThemeIcon } from "@mantine/core";
+import {
+  TextInput,
+  PasswordInput,
+  Button,
+  Paper,
+  Title,
+  Text,
+  Stack,
+  Alert,
+  SimpleGrid,
+  Group,
+  ThemeIcon,
+} from "@mantine/core";
 import { IconTicket } from "@tabler/icons-react";
 import { useAuth } from "../AuthContext";
 import { getErrorMessage } from "../../../api/errors";
 
 function BrandMark() {
   return (
-    <Group gap={8} justify="center">
-      <ThemeIcon variant="gradient" gradient={{ from: "violet", to: "indigo", deg: 135 }} radius="md" size={34}>
+    <Group gap="xs">
+      <ThemeIcon
+        variant="gradient"
+        gradient={{ from: "violet", to: "indigo", deg: 135 }}
+        radius="md"
+        size={34}
+      >
         <IconTicket size={20} />
       </ThemeIcon>
+
       <Text fw={800} fz="xl" style={{ letterSpacing: "-0.02em" }}>
         EventHub
       </Text>
@@ -25,7 +43,9 @@ const schema = z
   .object({
     username: z.string().min(3, "At least 3 characters"),
     password: z.string().min(8, "At least 8 characters"),
-    confirm_password: z.string().min(1, "Please confirm your password"),
+    confirm_password: z
+      .string()
+      .min(1, "Please confirm your password"),
     first_name: z.string().min(1, "Required"),
     last_name: z.string().min(1, "Required"),
     email: z.string().email("Invalid email"),
@@ -35,14 +55,13 @@ const schema = z
     country: z.string().optional(),
     tax_id: z.string().min(1, "Required"),
   })
-  // Cross-field validation: zod's .refine() runs after each individual field
-  // passes its own rule, and can compare multiple fields at once. `path`
-  // attaches the resulting error message to confirm_password specifically,
-  // so it shows up under that field rather than as a generic form-level error.
-  .refine((data) => data.password === data.confirm_password, {
-    message: "Passwords don't match",
-    path: ["confirm_password"],
-  });
+  .refine(
+    (data) => data.password === data.confirm_password,
+    {
+      message: "Passwords don't match",
+      path: ["confirm_password"],
+    }
+  );
 
 export default function Register() {
   const [serverError, setServerError] = useState(null);
@@ -53,16 +72,18 @@ export default function Register() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(schema) });
+  } = useForm({
+    resolver: zodResolver(schema),
+  });
 
   async function onSubmit(values) {
     setServerError(null);
+
     try {
-      // confirm_password only exists to validate on the client -- the
-      // backend's UserRegister schema has no such field, so it's stripped
-      // out of the payload before sending.
-      // eslint-disable-next-line no-unused-vars -- intentionally dropped from the payload
+      // confirm_password is only used for client-side validation.
+      // It is not part of the backend UserRegister schema.
       const { confirm_password, ...payload } = values;
+
       await registerAccount(payload);
       setSuccess(true);
     } catch (err) {
@@ -72,70 +93,133 @@ export default function Register() {
 
   if (success) {
     return (
-      <Stack maw={480} mx="auto" mt="xl" gap="lg">
-        <BrandMark />
-        <Paper p="lg" withBorder radius="md" shadow="sm">
-        <Title order={2} mb="xs">
-          Registration received
-        </Title>
-        <Text>
-          Your account is pending admin approval. You&apos;ll be able to log in once it&apos;s
-          approved.
-        </Text>
-        <Text mt="md">
-          <Link to="/login">Back to login</Link>
-        </Text>
+      <Stack align="center" justify="center" mih="100vh">
+        <Paper withBorder shadow="md" p="xl" radius="md" maw={500} w="100%">
+          <Stack>
+            <BrandMark />
+
+            <Title order={2}>Registration received</Title>
+
+            <Text>
+              Your account is pending admin approval. You'll be able to log in
+              once it's approved.
+            </Text>
+
+            <Button component={Link} to="/login" fullWidth>
+              Back to login
+            </Button>
+          </Stack>
         </Paper>
       </Stack>
     );
   }
 
   return (
-    <Stack maw={480} mx="auto" mt="xl" gap="lg">
-      <BrandMark />
-      <Paper p="lg" withBorder radius="md" shadow="sm">
-      <Title order={2} mb="xs">
-        Create an account
-      </Title>
-      <Text c="dimmed" size="sm" mb="md">
-        New accounts require admin approval before you can log in.
-      </Text>
-
-      <form onSubmit={handleSubmit(onSubmit)}>
+    <Stack align="center" justify="center" mih="100vh">
+      <Paper withBorder shadow="md" p="xl" radius="md" maw={600} w="100%">
         <Stack>
-          {serverError && (
-            <Alert color="red" variant="light">
-              {serverError}
-            </Alert>
-          )}
-          <TextInput label="Username" {...register("username")} error={errors.username?.message} />
-          <PasswordInput label="Password" {...register("password")} error={errors.password?.message} />
-          <PasswordInput
-            label="Confirm password"
-            {...register("confirm_password")}
-            error={errors.confirm_password?.message}
-          />
-          <SimpleGrid cols={2}>
-            <TextInput label="First name" {...register("first_name")} error={errors.first_name?.message} />
-            <TextInput label="Last name" {...register("last_name")} error={errors.last_name?.message} />
-          </SimpleGrid>
-          <TextInput label="Email" {...register("email")} error={errors.email?.message} />
-          <TextInput label="Phone" {...register("phone")} error={errors.phone?.message} />
-          <TextInput label="Address" {...register("address")} error={errors.address?.message} />
-          <SimpleGrid cols={2}>
-            <TextInput label="City" {...register("city")} error={errors.city?.message} />
-            <TextInput label="Country" {...register("country")} error={errors.country?.message} />
-          </SimpleGrid>
-          <TextInput label="Tax ID (ΑΦΜ)" {...register("tax_id")} error={errors.tax_id?.message} />
-          <Button type="submit" loading={isSubmitting} fullWidth mt="sm">
-            Register
-          </Button>
-        </Stack>
-      </form>
+          <BrandMark />
 
-      <Text size="sm" mt="md">
-        Already have an account? <Link to="/login">Log in</Link>
-      </Text>
+          <Title order={2}>Create an account</Title>
+
+          <Text c="dimmed">
+            New accounts require admin approval before you can log in.
+          </Text>
+
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Stack>
+              {serverError && (
+                <Alert color="red" variant="light">
+                  {serverError}
+                </Alert>
+              )}
+
+              <TextInput
+                label="Username"
+                {...register("username")}
+                error={errors.username?.message}
+              />
+
+              <PasswordInput
+                label="Password"
+                {...register("password")}
+                error={errors.password?.message}
+              />
+
+              <PasswordInput
+                label="Confirm password"
+                {...register("confirm_password")}
+                error={errors.confirm_password?.message}
+              />
+
+              <SimpleGrid cols={2}>
+                <TextInput
+                  label="First name"
+                  {...register("first_name")}
+                  error={errors.first_name?.message}
+                />
+
+                <TextInput
+                  label="Last name"
+                  {...register("last_name")}
+                  error={errors.last_name?.message}
+                />
+              </SimpleGrid>
+
+              <TextInput
+                label="Email"
+                {...register("email")}
+                error={errors.email?.message}
+              />
+
+              <TextInput
+                label="Phone"
+                {...register("phone")}
+                error={errors.phone?.message}
+              />
+
+              <TextInput
+                label="Address"
+                {...register("address")}
+                error={errors.address?.message}
+              />
+
+              <SimpleGrid cols={2}>
+                <TextInput
+                  label="City"
+                  {...register("city")}
+                  error={errors.city?.message}
+                />
+
+                <TextInput
+                  label="Country"
+                  {...register("country")}
+                  error={errors.country?.message}
+                />
+              </SimpleGrid>
+
+              <TextInput
+                label="Tax ID (ΑΦΜ)"
+                {...register("tax_id")}
+                error={errors.tax_id?.message}
+              />
+
+              <Button
+                type="submit"
+                loading={isSubmitting}
+                fullWidth
+                mt="sm"
+              >
+                Register
+              </Button>
+            </Stack>
+          </form>
+
+          <Text size="sm" mt="md">
+            Already have an account?{" "}
+            <Link to="/login">Log in</Link>
+          </Text>
+        </Stack>
       </Paper>
     </Stack>
   );

@@ -10,9 +10,12 @@ export function getErrorMessage(err, fallback = "Something went wrong") {
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail)) {
     const messages = detail
-      // Pydantic v2 prefixes custom validator messages with "Value error, ";
-      // strip it so the user sees just our sentence.
-      .map((d) => d?.msg?.replace(/^Value error,\s*/, ""))
+      .map((d) => {
+        const msg = d?.msg?.replace(/^Value error,\s*/, "");
+        if (!msg) return null;
+        const field = Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : null;
+        return field && typeof field === "string" ? `${field}: ${msg}` : msg;
+      })
       .filter(Boolean);
     if (messages.length) return messages.join("; ");
   }

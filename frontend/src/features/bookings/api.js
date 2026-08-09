@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../api/client";
 
-export function useMyBookings() {
+export function useMyBookings(options = {}) {
   return useQuery({
     queryKey: ["bookings", "mine"],
     queryFn: async () => {
       const response = await api.get("/bookings/mine");
       return response.data;
     },
+    enabled: options.enabled ?? true,
   });
 }
 

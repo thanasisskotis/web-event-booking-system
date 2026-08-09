@@ -12,10 +12,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, db: Session = Depends(get_db)):
     existing = db.query(User).filter(
-        (User.username == payload.username) | (User.email == payload.email)
+        (User.username == payload.username)
+        | (User.email == payload.email)
+        | (User.tax_id == payload.tax_id)
     ).first()
     if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username or email already taken")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username, email, or tax ID already registered")
 
     user = User(
         username=payload.username,
@@ -34,7 +36,6 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return user
-
 
 @router.post("/login", response_model=Token)
 def login(payload: UserLogin, db: Session = Depends(get_db)):

@@ -6,7 +6,7 @@ from app.database import get_db
 from app.models.models_booking import Booking, BookingStatus, TicketType
 from app.models.models_event import EventStatus
 from app.models.models_user import User, UserPrivilege
-from app.schemas.booking import BookingCreate, BookingOut
+from app.schemas.booking import BookingCreate, BookingOut, MyBookingOut
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -70,6 +70,29 @@ def create_booking(
     return booking
 
 
-@router.get("/mine", response_model=list[BookingOut])
+@router.get("/mine", response_model=list[MyBookingOut])
 def list_my_bookings(db: Session = Depends(get_db), user: User = Depends(require_approved)):
-    return db.query(Booking).filter(Booking.user_id == user.user_id).all()
+    bookings = (
+        db.query(Booking)
+        .filter(Booking.user_id == user.user_id)
+        .options(joinedload(Booking.ticket_type).joinedload(TicketType.event))
+        .order_by(Booking.booking_time.desc())
+        .all()
+    )
+    return [
+        MyBookingOut(
+            booking_id=b.booking_id,
+            user_id=b.user_id,
+            ticket_type_id=b.ticket_type_id,
+            booking_time=b.booking_time,
+            number_of_tickets=b.number_of_tickets,
+            total_cost=b.total_cost,
+            booking_status=b.booking_status,
+            event_id=b.ticket_type.event.event_id,
+            event_title=b.ticket_type.event.title,
+            event_status=b.ticket_type.event.status,
+            organizer_id=b.ticket_type.event.organizer_id,
+            ticket_type_name=b.ticket_type.name,
+        )
+        for b in bookings
+    ]

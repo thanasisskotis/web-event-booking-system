@@ -11,19 +11,24 @@ import {
   Button,
   Paper,
 } from "@mantine/core";
-import { IconMail, IconMailOpened, IconTrash, IconSend, IconEye, IconCheck } from "@tabler/icons-react";
+import { IconMail, IconMailOpened, IconTrash, IconSend, IconEye, IconCheck, IconArrowBackUp } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import { confirmAction } from "../../../components/confirm";
 import EmptyState from "../../../components/EmptyState";
 import TableSkeleton from "../../../components/TableSkeleton";
 import PageHeader from "../../../components/PageHeader";
-import { useInbox, useSent, useMarkRead, useDeleteMessage } from "../api";
+import { useAuth } from "../../auth/AuthContext";
+import { useInbox, useSent, useMarkRead, useDeleteMessage, useSendMessage } from "../api";
+import ComposeMessageModal from "../components/ComposeMessageModal";
 import { getErrorMessage } from "../../../api/errors";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" });
 
-function MessageDetailModal({ message, onClose, onDelete }) {
+function MessageDetailModal({ message, currentUserId, onClose, onDelete, onReply }) {
   if (!message) return null;
+  // You can reply only to a message you received, and only when it carries an
+  // event context (the backend requires event_id + a booking/organizer link).
+  const canReply = message.recipient_id === currentUserId && !!message.event_id;
   return (
     <Modal opened={!!message} onClose={onClose} title={message.subject || "(no subject)"} size="md">
       <Stack gap="xs">
@@ -59,6 +64,11 @@ function MessageDetailModal({ message, onClose, onDelete }) {
           >
             Delete
           </Button>
+          {canReply && (
+            <Button leftSection={<IconArrowBackUp size={16} />} onClick={() => onReply(message)}>
+              Reply
+            </Button>
+          )}
         </Group>
       </Stack>
     </Modal>
@@ -151,12 +161,20 @@ function MessageTable({ messages, isLoading, emptyMessage, direction, onOpen }) 
 
 export default function Messages() {
   const [selected, setSelected] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
   const [activeTab, setActiveTab] = useState("inbox");
 
+  const { user } = useAuth();
   const { data: inbox, isLoading: loadingInbox } = useInbox();
   const { data: sent, isLoading: loadingSent } = useSent();
   const markRead = useMarkRead();
   const deleteMessage = useDeleteMessage();
+  const sendMessage = useSendMessage();
+
+  function handleReply(message) {
+    setSelected(null); // close the detail modal, open the reply composer
+    setReplyTo(message);
+  }
 
   function openMessage(message) {
     setSelected(message);
@@ -209,7 +227,29 @@ export default function Messages() {
         </Tabs.Panel>
       </Tabs>
 
-      <MessageDetailModal message={selected} onClose={() => setSelected(null)} onDelete={handleDelete} />
+      <MessageDetailModal
+        message={selected}
+        currentUserId={user?.user_id}
+        onClose={() => setSelected(null)}
+        onDelete={handleDelete}
+        onReply={handleReply}
+      />
+
+      <ComposeMessageModal
+        opened={!!replyTo}
+        onClose={() => setReplyTo(null)}
+        title={replyTo ? `Reply to ${replyTo.sender_username ?? "user"}` : ""}
+        sending={sendMessage.isPending}
+        onSend={async ({ subject, body }) => {
+          await sendMessage.mutateAsync({
+            recipientId: replyTo.sender_id,
+            eventId: replyTo.event_id,
+            subject: subject || (replyTo.subject ? `Re: ${replyTo.subject}` : null),
+            body,
+          });
+          notifications.show({ color: "green", message: "Reply sent" });
+        }}
+      />
     </Stack>
   );
 }

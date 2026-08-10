@@ -112,8 +112,15 @@ export default function EventDetail() {
     (b) => b.booking_status === "CONFIRMED" && eventTicketTypeIds.has(b.ticket_type_id)
   );
 
-  const canMessageOrganizer =
-    isAuthenticated && user.user_id !== event.organizer_id && hasBookingForThisEvent;
+  // Whether to surface the "contact organizer" block at all: any logged-in
+  // non-admin who isn't the organizer, on a published event. The button inside
+  // is enabled only once they have a booking (backend rule) -- otherwise it
+  // shows a hint explaining why.
+  const showOrganizerContact =
+    isAuthenticated &&
+    !hasRole("ADMIN") &&
+    user.user_id !== event.organizer_id &&
+    event.status === "PUBLISHED";
 
   // The hero already shows the first photo; the gallery shows the rest.
   const galleryPhotos = (event.photos ?? []).slice(1);
@@ -136,17 +143,6 @@ export default function EventDetail() {
           </Badge>
         ))}
       </Group>
-
-      {canMessageOrganizer && (
-        <Button
-          variant="light"
-          w="fit-content"
-          leftSection={<IconMail size={16} />}
-          onClick={() => setMessageOpen(true)}
-        >
-          Message organizer
-        </Button>
-      )}
 
       <Text c="dimmed" size="sm">
         {event.venue}, {event.address}, {event.city}, {event.country}
@@ -188,6 +184,30 @@ export default function EventDetail() {
           </Text>
         )}
       </Paper>
+
+      {showOrganizerContact && (
+        <Paper withBorder p="md" radius="md">
+          <Group justify="space-between" wrap="nowrap" gap="md">
+            <div>
+              <Text fw={600}>Questions about this event?</Text>
+              <Text size="sm" c="dimmed">
+                {hasBookingForThisEvent
+                  ? "Message the organizer directly."
+                  : "Book a ticket to message the organizer."}
+              </Text>
+            </div>
+            <Button
+              variant="light"
+              leftSection={<IconMail size={16} />}
+              disabled={!hasBookingForThisEvent}
+              onClick={() => setMessageOpen(true)}
+              style={{ flexShrink: 0 }}
+            >
+              Message organizer
+            </Button>
+          </Group>
+        </Paper>
+      )}
 
       <ComposeMessageModal
         opened={messageOpen}

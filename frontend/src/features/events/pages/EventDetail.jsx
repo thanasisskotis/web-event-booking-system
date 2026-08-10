@@ -87,7 +87,10 @@ export default function EventDetail() {
   const { eventId } = useParams();
   const { data: event, isLoading, isError } = useEvent(eventId);
   const { user, isAuthenticated, hasRole } = useAuth();
-  const { data: myBookings } = useMyBookings();
+  // Guests must be able to view an event (spec: browse/search without login),
+  // so only fetch the viewer's bookings when authenticated -- otherwise
+  // /bookings/mine 401s and the axios interceptor bounces the guest to /login.
+  const { data: myBookings } = useMyBookings({ enabled: isAuthenticated });
   const [messageOpen, setMessageOpen] = useState(false);
   const sendMessage = useSendMessage();
 

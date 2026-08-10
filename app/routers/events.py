@@ -17,7 +17,7 @@ from app.models.models_event import EventPhoto
 from app.services.uploads import save_event_photo, delete_event_photo_file
 
 from fastapi import Query
-from sqlalchemy import text
+from sqlalchemy import text, func
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -297,11 +297,20 @@ def list_events(
     if category:
         base = base.join(Event.categories).filter(Category.name == category)
     if min_price is not None or max_price is not None:
-        base = base.join(Event.ticket_types)
+        # Filter on each event's cheapest ("from") ticket price -- the value the
+        # cards display -- so min/max bound what the user actually sees, and an
+        # event can't slip through by matching min on one ticket and max on
+        # another (e.g. a 25/60 event showing up under a min_price of 30).
+        cheapest = (
+            db.query(TicketType.event_id, func.min(TicketType.price).label("from_price"))
+            .group_by(TicketType.event_id)
+            .subquery()
+        )
+        base = base.join(cheapest, cheapest.c.event_id == Event.event_id)
         if min_price is not None:
-            base = base.filter(TicketType.price >= min_price)
+            base = base.filter(cheapest.c.from_price >= min_price)
         if max_price is not None:
-            base = base.filter(TicketType.price <= max_price)
+            base = base.filter(cheapest.c.from_price <= max_price)
     if q:
         base = base.filter(text("events.search_vector @@ plainto_tsquery('greek', :q)")).params(q=q)
 

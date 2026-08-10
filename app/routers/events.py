@@ -283,8 +283,16 @@ def list_events(
     _complete_past_events(db)
 
     # Phase 1: find matching event_ids (select start_datetime too,
-    # required by Postgres when combining DISTINCT with ORDER BY)
-    base = db.query(Event.event_id, Event.start_datetime).filter(Event.status == EventStatus.PUBLISHED)
+    # required by Postgres when combining DISTINCT with ORDER BY).
+    # Sold-out events (no ticket type with availability left) are hidden from
+    # browse -- there's nothing to book, so they only add noise.
+    base = (
+        db.query(Event.event_id, Event.start_datetime)
+        .filter(
+            Event.status == EventStatus.PUBLISHED,
+            Event.ticket_types.any(TicketType.available > 0),
+        )
+    )
 
     if city:
         base = base.filter(Event.city.ilike(city))

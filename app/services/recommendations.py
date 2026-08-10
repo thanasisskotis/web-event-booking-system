@@ -104,6 +104,20 @@ def _collect_signals(db: Session) -> dict[tuple[int, int], float]:
     return signals
 
 
+def _available_published_event_ids(db: Session) -> set[int]:
+    """Published events that still have at least one ticket available. Sold-out
+    events can't be booked, so we never recommend them."""
+    rows = (
+        db.query(Event.event_id)
+        .filter(
+            Event.status == EventStatus.PUBLISHED,
+            Event.ticket_types.any(TicketType.available > 0),
+        )
+        .all()
+    )
+    return {r[0] for r in rows}
+
+
 def get_recommendations(db: Session, user_id: int, top_n: int = 10) -> list[Event]:
     trained = _get_or_train_model(db)
     if trained is None:
@@ -115,9 +129,14 @@ def get_recommendations(db: Session, user_id: int, top_n: int = 10) -> list[Even
 
     scores = trained.model.predict_all_for_user(trained.user_index[user_id])
     already_seen = {trained.event_index[e] for (u, e) in trained.signals if u == user_id}
+    available_ids = _available_published_event_ids(db)
 
     ranked_item_indices = sorted(
-        (idx for idx in range(len(trained.event_ids)) if idx not in already_seen),
+        (
+            idx
+            for idx in range(len(trained.event_ids))
+            if idx not in already_seen and trained.event_ids[idx] in available_ids
+        ),
         key=lambda idx: scores[idx],
         reverse=True,
     )
@@ -142,7 +161,10 @@ def _fallback_popular(db: Session, exclude_event_ids: set[int], top_n: int) -> l
     query = (
         db.query(Event, func.count(EventView.view_id).label("view_count"))
         .outerjoin(EventView, EventView.event_id == Event.event_id)
-        .filter(Event.status == EventStatus.PUBLISHED)
+        .filter(
+            Event.status == EventStatus.PUBLISHED,
+            Event.ticket_types.any(TicketType.available > 0),
+        )
         .group_by(Event.event_id)
     )
     if exclude_event_ids:

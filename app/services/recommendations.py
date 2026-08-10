@@ -1,6 +1,7 @@
 import threading
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -104,13 +105,17 @@ def _collect_signals(db: Session) -> dict[tuple[int, int], float]:
     return signals
 
 
-def _available_published_event_ids(db: Session) -> set[int]:
-    """Published events that still have at least one ticket available. Sold-out
-    events can't be booked, so we never recommend them."""
+def _candidate_event_ids(db: Session, user_id: int) -> set[int]:
+    """Events eligible to be recommended to this user: PUBLISHED, not yet ended,
+    with at least one ticket still available, and NOT organized by the user
+    themselves. Sold-out / past / own events are never recommended."""
+    now = datetime.now(timezone.utc)
     rows = (
         db.query(Event.event_id)
         .filter(
             Event.status == EventStatus.PUBLISHED,
+            Event.end_datetime > now,
+            Event.organizer_id != user_id,
             Event.ticket_types.any(TicketType.available > 0),
         )
         .all()
@@ -118,57 +123,58 @@ def _available_published_event_ids(db: Session) -> set[int]:
     return {r[0] for r in rows}
 
 
-def get_recommendations(db: Session, user_id: int, top_n: int = 10) -> list[Event]:
-    trained = _get_or_train_model(db)
-    if trained is None:
-        return _fallback_popular(db, exclude_event_ids=set(), top_n=top_n)
+def _seen_event_ids(db: Session, user_id: int) -> set[int]:
+    """Events this user has already viewed or confirmed-booked, computed LIVE
+    (not from the cached training snapshot) so we never recommend something the
+    user has just interacted with, even between periodic retrains."""
+    views = db.query(EventView.event_id).filter(EventView.user_id == user_id)
+    booked = (
+        db.query(TicketType.event_id)
+        .join(Booking, Booking.ticket_type_id == TicketType.ticket_type_id)
+        .filter(Booking.user_id == user_id, Booking.booking_status == BookingStatus.CONFIRMED)
+    )
+    return {r[0] for r in views.all()} | {r[0] for r in booked.all()}
 
-    if user_id not in trained.user_index:
-        seen_event_ids = {eid for (uid, eid) in trained.signals if uid == user_id}
-        return _fallback_popular(db, exclude_event_ids=seen_event_ids, top_n=top_n)
+
+def get_recommendations(db: Session, user_id: int, top_n: int = 10) -> list[Event]:
+    # Recommendable set is recomputed live every request, independent of the
+    # cached model: excludes sold-out, ended, own, and already-seen events.
+    recommendable = _candidate_event_ids(db, user_id) - _seen_event_ids(db, user_id)
+
+    trained = _get_or_train_model(db)
+    if trained is None or user_id not in trained.user_index:
+        return _fallback_popular(db, allowed_event_ids=recommendable, top_n=top_n)
 
     scores = trained.model.predict_all_for_user(trained.user_index[user_id])
-    already_seen = {trained.event_index[e] for (u, e) in trained.signals if u == user_id}
-    available_ids = _available_published_event_ids(db)
-
     ranked_item_indices = sorted(
-        (
-            idx
-            for idx in range(len(trained.event_ids))
-            if idx not in already_seen and trained.event_ids[idx] in available_ids
-        ),
+        (idx for idx in range(len(trained.event_ids)) if trained.event_ids[idx] in recommendable),
         key=lambda idx: scores[idx],
         reverse=True,
     )
     top_event_ids = [trained.event_ids[idx] for idx in ranked_item_indices[:top_n]]
 
     if not top_event_ids:
-        seen_event_ids = {trained.event_ids[idx] for idx in already_seen}
-        return _fallback_popular(db, exclude_event_ids=seen_event_ids, top_n=top_n)
+        return _fallback_popular(db, allowed_event_ids=recommendable, top_n=top_n)
 
     events_by_id = {
-        e.event_id: e
-        for e in db.query(Event)
-        .filter(Event.event_id.in_(top_event_ids), Event.status == EventStatus.PUBLISHED)
-        .all()
+        e.event_id: e for e in db.query(Event).filter(Event.event_id.in_(top_event_ids)).all()
     }
     return [events_by_id[eid] for eid in top_event_ids if eid in events_by_id]
 
 
-def _fallback_popular(db: Session, exclude_event_ids: set[int], top_n: int) -> list[Event]:
-    """Cold start: no signal for this user yet. Recommend the most-viewed
-    published events instead, per the "falls back to events viewed" rule."""
-    query = (
+def _fallback_popular(db: Session, allowed_event_ids: set[int], top_n: int) -> list[Event]:
+    """Cold start / empty model result: recommend the most-viewed events among
+    the already-filtered recommendable set (published, upcoming, available, not
+    the user's own, not already seen)."""
+    if not allowed_event_ids:
+        return []
+    rows = (
         db.query(Event, func.count(EventView.view_id).label("view_count"))
         .outerjoin(EventView, EventView.event_id == Event.event_id)
-        .filter(
-            Event.status == EventStatus.PUBLISHED,
-            Event.ticket_types.any(TicketType.available > 0),
-        )
+        .filter(Event.event_id.in_(allowed_event_ids))
         .group_by(Event.event_id)
+        .order_by(func.count(EventView.view_id).desc(), Event.start_datetime)
+        .limit(top_n)
+        .all()
     )
-    if exclude_event_ids:
-        query = query.filter(~Event.event_id.in_(exclude_event_ids))
-
-    rows = query.order_by(func.count(EventView.view_id).desc(), Event.start_datetime).limit(top_n).all()
     return [event for event, _ in rows]

@@ -82,6 +82,7 @@ export default function Register() {
     try {
       // confirm_password is only used for client-side validation.
       // It is not part of the backend UserRegister schema.
+      // eslint-disable-next-line no-unused-vars -- intentionally dropped from the payload
       const { confirm_password, ...payload } = values;
 
       await registerAccount(payload);

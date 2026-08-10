@@ -18,10 +18,15 @@ export default function ProtectedRoute({ children, role }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Role-restricted route (e.g. admin-only): send authenticated-but-unauthorized
-  // users home rather than showing a page the backend will 403 anyway.
-  if (role && user.priviledge !== role) {
-    return <Navigate to="/" replace />;
+  // Role-restricted route: `role` is a single role or a list of allowed roles.
+  // Send authenticated-but-unauthorized users home rather than showing a page
+  // the backend will 403 anyway (e.g. admin-only console, or the organizer/
+  // participant screens that the purely-administrative admin can't use).
+  if (role) {
+    const allowed = Array.isArray(role) ? role : [role];
+    if (!allowed.includes(user.priviledge)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return children;

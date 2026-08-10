@@ -14,7 +14,11 @@ export function getErrorMessage(err, fallback = "Something went wrong") {
         const msg = d?.msg?.replace(/^Value error,\s*/, "");
         if (!msg) return null;
         const field = Array.isArray(d?.loc) ? d.loc[d.loc.length - 1] : null;
-        return field && typeof field === "string" ? `${field}: ${msg}` : msg;
+        // Prefix the offending field name for per-field errors ("username: ..."),
+        // but not for model-level validators whose loc is just ["body"] (e.g. the
+        // capacity invariant) -- a "body:" prefix there is just noise.
+        const useField = field && typeof field === "string" && field !== "body";
+        return useField ? `${field}: ${msg}` : msg;
       })
       .filter(Boolean);
     if (messages.length) return messages.join("; ");

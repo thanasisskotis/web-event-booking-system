@@ -8,13 +8,15 @@ import { useUnreadCount } from "../features/messaging/api";
 export default function Layout() {
   const [opened, { toggle, close }] = useDisclosure();
   const { user, isAuthenticated, logout } = useAuth();
+  const isAdmin = user?.priviledge === "ADMIN";
   const navigate = useNavigate();
   const location = useLocation();
   // Guests hit this Layout too (it wraps every route, including public
   // ones like /events and /login) — only poll unread count once logged in,
   // otherwise this 401s repeatedly and the axios interceptor bounces
-  // guests to /login just for browsing.
-  const { data: unread } = useUnreadCount(isAuthenticated);
+  // guests to /login just for browsing. Admins don't participate in
+  // messaging, so skip the poll for them as well.
+  const { data: unread } = useUnreadCount(isAuthenticated && !isAdmin);
 
   function handleLogout() {
     logout();
@@ -80,7 +82,11 @@ export default function Layout() {
 
       <AppShell.Navbar p="md">
         {navItem("Browse events", "/events")}
-        {isAuthenticated && (
+        {/* The admin role is purely administrative: it can't organize events,
+            book, or message, so it only sees Browse + the Admin console --
+            not the organizer/participant items below. */}
+        {isAuthenticated && isAdmin && navItem("Admin", "/admin")}
+        {isAuthenticated && !isAdmin && (
           <>
             {navItem("Dashboard", "/")}
             {navItem("My events", "/my-events")}
@@ -101,7 +107,6 @@ export default function Layout() {
               active={isActive("/messages")}
               onClick={close}
             />
-            {user.priviledge === "ADMIN" && navItem("Admin", "/admin")}
           </>
         )}
       </AppShell.Navbar>

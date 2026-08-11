@@ -54,6 +54,12 @@ class EventCreate(BaseModel):
             raise ValueError(f"sum of ticket quantities ({total}) exceeds capacity ({self.capacity})")
         return self
 
+    @model_validator(mode="after")
+    def check_datetime_order(self):
+        if self.end_datetime <= self.start_datetime:
+            raise ValueError("end_datetime must be after start_datetime")
+        return self
+
 
 class EventUpdate(BaseModel):
     title: str | None = None

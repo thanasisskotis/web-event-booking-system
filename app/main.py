@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.routers import admin, auth, events, bookings, messages, recommendations
@@ -15,6 +16,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Χωρίς αυτό, ένα unhandled exception (π.χ. IntegrityError απο τη ΒΔ) προσπερνά
+# το CORSMiddleware στο δρόμο της εξόδου -> ο browser βλέπει response ΧΩΡΙΣ
+# Access-Control-Allow-Origin header και το εμφανίζει ως "Network Error" αντί
+# για το πραγματικό status code, ακόμα κι αν ο server απάντησε κανονικά (φαίνεται
+# στο uvicorn log ως 500, όχι στον browser). Έτσι κάθε unhandled exception
+# επιστρέφει σαν κανονική JSON response, που περνάει σωστά μέσα απο το CORS
+# middleware.
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
 
 # Serves uploaded event photos at GET /uploads/<filename>, matching the URL
 # shape built in PhotoOut.from_orm_photo (schemas/event.py).

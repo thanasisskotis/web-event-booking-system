@@ -10,14 +10,14 @@ from app.models.models_user import User, UserPrivilege
 from app.schemas.booking import BookingForOrganizer
 from app.schemas.event import EventCreate, EventOut, EventUpdate
 from app.schemas.message import BroadcastCreate, MessageOut
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 from fastapi import UploadFile, File
 from app.models.models_event import EventPhoto
 from app.services.uploads import save_event_photo, delete_event_photo_file
 
 from fastapi import Query
-from sqlalchemy import text, func
+from sqlalchemy import text
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -32,24 +32,6 @@ def _get_or_create_categories(names: list[str], db: Session) -> list[Category]:
             db.flush()
         categories.append(category)
     return categories
-
-
-def _complete_past_events(db: Session) -> None:
-    """Lazily move PUBLISHED events whose EndDateTime has passed to COMPLETED.
-
-    There's no scheduler in this deployment, so we do it on the read paths:
-    the lifecycle status stays correct without a background job. COMPLETED
-    events are non-bookable (booking requires PUBLISHED) and drop out of the
-    public browse, but remain visible to their organizer for history.
-    """
-    now = datetime.now(timezone.utc)
-    updated = (
-        db.query(Event)
-        .filter(Event.status == EventStatus.PUBLISHED, Event.end_datetime < now)
-        .update({Event.status: EventStatus.COMPLETED}, synchronize_session=False)
-    )
-    if updated:
-        db.commit()
 
 
 def _check_capacity(capacity: int, ticket_types: list) -> None:
@@ -111,7 +93,6 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db), user: User
 
 @router.get("/mine", response_model=list[EventOut])
 def list_my_events(db: Session = Depends(get_db), user: User = Depends(require_approved)):
-    _complete_past_events(db)
     return (
         db.query(Event)
         .options(joinedload(Event.ticket_types))
@@ -173,6 +154,14 @@ def update_event(
     new_capacity = payload.capacity if payload.capacity is not None else event.capacity
     new_ticket_types = payload.ticket_types if payload.ticket_types is not None else event.ticket_types
     _check_capacity(new_capacity, new_ticket_types)
+
+    new_start = payload.start_datetime if payload.start_datetime is not None else event.start_datetime
+    new_end = payload.end_datetime if payload.end_datetime is not None else event.end_datetime
+    if new_end <= new_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="end_datetime must be after start_datetime",
+        )
 
     if payload.categories is not None:
         event.categories = _get_or_create_categories(payload.categories, db)
@@ -278,21 +267,9 @@ def list_events(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
-    # Keep the lifecycle current before filtering: past events become COMPLETED
-    # and therefore drop out of the PUBLISHED-only browse below.
-    _complete_past_events(db)
-
     # Phase 1: find matching event_ids (select start_datetime too,
-    # required by Postgres when combining DISTINCT with ORDER BY).
-    # Sold-out events (no ticket type with availability left) are hidden from
-    # browse -- there's nothing to book, so they only add noise.
-    base = (
-        db.query(Event.event_id, Event.start_datetime)
-        .filter(
-            Event.status == EventStatus.PUBLISHED,
-            Event.ticket_types.any(TicketType.available > 0),
-        )
-    )
+    # required by Postgres when combining DISTINCT with ORDER BY)
+    base = db.query(Event.event_id, Event.start_datetime).filter(Event.status == EventStatus.PUBLISHED)
 
     if city:
         base = base.filter(Event.city.ilike(city))
@@ -305,20 +282,11 @@ def list_events(
     if category:
         base = base.join(Event.categories).filter(Category.name == category)
     if min_price is not None or max_price is not None:
-        # Filter on each event's cheapest ("from") ticket price -- the value the
-        # cards display -- so min/max bound what the user actually sees, and an
-        # event can't slip through by matching min on one ticket and max on
-        # another (e.g. a 25/60 event showing up under a min_price of 30).
-        cheapest = (
-            db.query(TicketType.event_id, func.min(TicketType.price).label("from_price"))
-            .group_by(TicketType.event_id)
-            .subquery()
-        )
-        base = base.join(cheapest, cheapest.c.event_id == Event.event_id)
+        base = base.join(Event.ticket_types)
         if min_price is not None:
-            base = base.filter(cheapest.c.from_price >= min_price)
+            base = base.filter(TicketType.price >= min_price)
         if max_price is not None:
-            base = base.filter(cheapest.c.from_price <= max_price)
+            base = base.filter(TicketType.price <= max_price)
     if q:
         base = base.filter(text("events.search_vector @@ plainto_tsquery('greek', :q)")).params(q=q)
 
@@ -351,7 +319,6 @@ def get_event(
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ):
-    _complete_past_events(db)
     event = (
         db.query(Event)
         .options(joinedload(Event.ticket_types), joinedload(Event.categories))

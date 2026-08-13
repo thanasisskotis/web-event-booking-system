@@ -48,7 +48,7 @@ function UserDetailModal({ user, onClose }) {
           <Detail label="City" value={user.city} />
           <Detail label="Country" value={user.country} />
           <Detail label="Tax ID (ΑΦΜ)" value={user.tax_id} />
-          <Detail label="Role" value={user.priviledge} />
+          <Detail label="Account type" value={user.priviledge === "ADMIN" ? "Administrator" : "User"} />
         </Stack>
       )}
     </Modal>

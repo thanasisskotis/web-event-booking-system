@@ -140,6 +140,19 @@ export default function EventDetail() {
       <EventHero event={event} />
 
       <Group gap={6}>
+        {/* Your relationship to this event is contextual, not a stored role:
+            you're the "organizer" of events you own and a "participant" of
+            events you've booked -- shown here as a per-event badge. */}
+        {isAuthenticated && user.user_id === event.organizer_id && (
+          <Badge color="violet" variant="filled">
+            You organize this
+          </Badge>
+        )}
+        {isAuthenticated && user.user_id !== event.organizer_id && hasBookingForThisEvent && (
+          <Badge color="teal" variant="filled">
+            You're attending
+          </Badge>
+        )}
         {event.categories.map((c) => (
           <Badge key={c} variant="light" color="gray">
             {c}

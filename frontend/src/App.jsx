@@ -26,7 +26,7 @@ export default function App() {
         <Route
           path="/my-events"
           element={
-            <ProtectedRoute role={["ORGANIZER", "PARTICIPANT"]}>
+            <ProtectedRoute role="USER">
               <MyEvents />
             </ProtectedRoute>
           }
@@ -34,7 +34,7 @@ export default function App() {
         <Route
           path="/my-bookings"
           element={
-            <ProtectedRoute role={["ORGANIZER", "PARTICIPANT"]}>
+            <ProtectedRoute role="USER">
               <MyBookings />
             </ProtectedRoute>
           }
@@ -42,7 +42,7 @@ export default function App() {
         <Route
           path="/messages"
           element={
-            <ProtectedRoute role={["ORGANIZER", "PARTICIPANT"]}>
+            <ProtectedRoute role="USER">
               <Messages />
             </ProtectedRoute>
           }

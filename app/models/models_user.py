@@ -8,9 +8,12 @@ from app.database import Base
 
 
 class UserPrivilege(str, enum.Enum):
+    # Only two account kinds exist: the built-in administrator, and the ordinary
+    # registered user. "Organizer" and "participant" are NOT stored roles -- they
+    # are modes of use derived per event from relationships (Events.organizer_id
+    # and Bookings), so a single USER acts as both depending on context.
     ADMIN = "ADMIN"
-    ORGANIZER = "ORGANIZER"
-    PARTICIPANT = "PARTICIPANT"
+    USER = "USER"
 
 
 class UserStatus(str, enum.Enum):
@@ -33,6 +36,6 @@ class User(Base):
     city = Column(String(100), nullable=True)
     country = Column(String(100), nullable=True)
     tax_id = Column(String(20), unique=True, nullable=False)
-    priviledge = Column(SAEnum(UserPrivilege, name="user_priviledge"), nullable=False, default=UserPrivilege.PARTICIPANT)
+    priviledge = Column(SAEnum(UserPrivilege, name="user_priviledge"), nullable=False, default=UserPrivilege.USER)
     status = Column(SAEnum(UserStatus, name="user_status"), nullable=False, default=UserStatus.PENDING)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

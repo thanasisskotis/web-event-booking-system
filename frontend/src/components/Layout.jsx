@@ -60,7 +60,8 @@ export default function Layout() {
             {isAuthenticated ? (
               <>
                 <Text size="sm" c="dimmed">
-                  {user.username} ({user.priviledge.toLowerCase()})
+                  {user.username}
+                  {isAdmin ? " (admin)" : ""}
                 </Text>
                 <Button variant="subtle" onClick={handleLogout}>
                   Log out

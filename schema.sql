@@ -6,7 +6,10 @@
 -- ============================================
 -- ENUM TYPES
 -- ============================================
-CREATE TYPE user_priviledge       AS ENUM ('ADMIN', 'ORGANIZER', 'PARTICIPANT');
+-- Only two account kinds: the built-in admin and the ordinary registered user.
+-- Organizer/participant are per-event modes derived from relationships
+-- (Events.organizer_id, Bookings), not stored roles.
+CREATE TYPE user_priviledge       AS ENUM ('ADMIN', 'USER');
 CREATE TYPE user_status     AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 CREATE TYPE event_status    AS ENUM ('DRAFT', 'PUBLISHED', 'CANCELLED', 'COMPLETED');
 CREATE TYPE booking_status  AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED');
@@ -26,7 +29,7 @@ CREATE TABLE Users (
     city            VARCHAR(100),
     country         VARCHAR(100),
     tax_id          VARCHAR(20) UNIQUE NOT NULL,     -- ΑΦΜ
-    priviledge            user_priviledge NOT NULL DEFAULT 'PARTICIPANT',
+    priviledge            user_priviledge NOT NULL DEFAULT 'USER',
     status          user_status NOT NULL DEFAULT 'PENDING',
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -181,7 +184,7 @@ INSERT INTO Categories (name) VALUES
 
 -- Test organizer
 INSERT INTO Users (username, password_hash, first_name, last_name, email, phone, tax_id, priviledge, status)
-VALUES ('org_athens', '$2b$10$REPLACE_WITH_REAL_BCRYPT_HASH', 'Maria', 'Papadopoulou', 'maria@events.gr', '2100000001', '111111111', 'ORGANIZER', 'APPROVED');
+VALUES ('org_athens', '$2b$10$REPLACE_WITH_REAL_BCRYPT_HASH', 'Maria', 'Papadopoulou', 'maria@events.gr', '2100000001', '111111111', 'USER', 'APPROVED');
 
 -- Test event
 INSERT INTO Events (title, event_type, venue, address, city, country, start_datetime, end_datetime, capacity, organizer_id, status, description)

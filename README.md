@@ -185,7 +185,6 @@ Set `VITE_HTTPS=true` in `frontend/.env` (Vite picks up the generated cert autom
 uvicorn app.main:app --reload --ssl-keyfile=certs/key.pem --ssl-certfile=certs/cert.pem
 ```
 
-Then use an `https://` URL for `VITE_API_URL`. In a real deployment we'd normally terminate TLS at a reverse proxy (e.g. Nginx) in front of both services instead of handling it in either one directly — the self-signed cert here is just for running the demo locally.
 
 ## Environment variables
 

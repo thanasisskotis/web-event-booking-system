@@ -109,6 +109,26 @@ web-event-booking-system/
 - Node.js 20.19+ (or 22.12+) and npm — required by Vite 8
 - PostgreSQL (13+ recommended)
 
+### Quick start (recommended): `run.sh`
+ 
+For local dev, `run.sh` does everything below in one shot — idempotent, so re-running it just starts what's already set up instead of redoing it:
+ 
+```bash
+chmod +x run.sh
+./run.sh
+```
+ 
+It will, in order: start PostgreSQL, create the `tass` role and `eventapp_db` database and load `schema.sql` if they don't exist yet, create a Python venv and install backend deps if missing, install frontend deps if missing, then start the backend (`http://localhost:8000`) and the frontend (`http://localhost:5173`, or the next free port if that one's taken). `Ctrl+C` stops both; PostgreSQL is left running.
+ 
+Run it with `HTTPS=true` to serve both over a local self-signed TLS certificate instead (generated automatically on first run into `certs/`, and `frontend/.env` is updated for you):
+ 
+```bash
+HTTPS=true ./run.sh
+```
+ 
+The rest of this section (steps 1–3) is the same setup broken out manually, useful if you need to run backend/frontend separately.
+
+
 ### 1. Database
 
 ```bash

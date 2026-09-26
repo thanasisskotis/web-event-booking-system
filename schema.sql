@@ -173,8 +173,8 @@ CREATE INDEX idx_tickettypes_price ON TicketTypes(price);
 -- ============================================
 
 -- Built-in admin χρήστης (requirement 3)
--- Password hash πρέπει να παραχθεί εκ των προτέρων με bcrypt (π.χ. bcrypt.hash('admin123', 10))
--- Αντικατέστησε το placeholder hash παρακάτω με το πραγματικό hash σου.
+-- username: admin
+-- password: admin123
 INSERT INTO Users (username, password_hash, first_name, last_name, email, phone, tax_id, priviledge, status)
 VALUES ('admin', '$2b$12$iKqwLWgWZI8Q6nEy5e/7Q.Geo4j7iXXCr.WL5bzdgvtoLh4i8n.22', 'System', 'Admin', 'admin@app.gr', '2100000000', '000000000', 'ADMIN', 'APPROVED');
 
@@ -183,6 +183,8 @@ INSERT INTO Categories (name) VALUES
 ('Music'), ('Theatre'), ('Conference'), ('Sports'), ('Workshop');
 
 -- Test organizer
+-- username: org_athens
+-- password: org_athens12345
 INSERT INTO Users (username, password_hash, first_name, last_name, email, phone, tax_id, priviledge, status)
 VALUES ('org_athens', '$2b$12$NJ.cOTBJft4TSLyiK0vxj.JvrtA7dy8YiHJCH1eIMbcxmBr8rQiF6', 'Maria', 'Papadopoulou', 'maria@events.gr', '2100000001', '111111111', 'USER', 'APPROVED');
 

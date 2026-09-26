@@ -115,6 +115,7 @@ For local dev, `run.sh` does everything below in one shot — idempotent, so re-
  
 ```bash
 chmod +x run.sh
+chmod +x scripts/generate_certs.sh
 ./run.sh
 ```
  

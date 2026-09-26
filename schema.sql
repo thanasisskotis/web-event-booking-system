@@ -176,7 +176,7 @@ CREATE INDEX idx_tickettypes_price ON TicketTypes(price);
 -- Password hash πρέπει να παραχθεί εκ των προτέρων με bcrypt (π.χ. bcrypt.hash('admin123', 10))
 -- Αντικατέστησε το placeholder hash παρακάτω με το πραγματικό hash σου.
 INSERT INTO Users (username, password_hash, first_name, last_name, email, phone, tax_id, priviledge, status)
-VALUES ('admin', '$2b$10$REPLACE_WITH_REAL_BCRYPT_HASH', 'System', 'Admin', 'admin@app.gr', '2100000000', '000000000', 'ADMIN', 'APPROVED');
+VALUES ('admin', '$2b$12$iKqwLWgWZI8Q6nEy5e/7Q.Geo4j7iXXCr.WL5bzdgvtoLh4i8n.22', 'System', 'Admin', 'admin@app.gr', '2100000000', '000000000', 'ADMIN', 'APPROVED');
 
 -- Test categories
 INSERT INTO Categories (name) VALUES
@@ -184,7 +184,7 @@ INSERT INTO Categories (name) VALUES
 
 -- Test organizer
 INSERT INTO Users (username, password_hash, first_name, last_name, email, phone, tax_id, priviledge, status)
-VALUES ('org_athens', '$2b$10$REPLACE_WITH_REAL_BCRYPT_HASH', 'Maria', 'Papadopoulou', 'maria@events.gr', '2100000001', '111111111', 'USER', 'APPROVED');
+VALUES ('org_athens', '$2b$12$NJ.cOTBJft4TSLyiK0vxj.JvrtA7dy8YiHJCH1eIMbcxmBr8rQiF6', 'Maria', 'Papadopoulou', 'maria@events.gr', '2100000001', '111111111', 'USER', 'APPROVED');
 
 -- Test event
 INSERT INTO Events (title, event_type, venue, address, city, country, start_datetime, end_datetime, capacity, organizer_id, status, description)
